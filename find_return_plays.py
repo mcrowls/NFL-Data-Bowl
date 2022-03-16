@@ -19,4 +19,5 @@ for id in play_nos:
     else:
         for game in games:
             new_df = get_more_specific_df(df, 'gameId', game)
-            new_df.to_csv('csvs\\Receiving_Plays\\play' + str(id) + '-game' + str(game) + '.csv')
+            if 'punt_received' in np.unique(new_df['event']):
+                new_df.to_csv('csvs\\Receiving_Plays\\play' + str(id) + '-game' + str(game) + '.csv')
