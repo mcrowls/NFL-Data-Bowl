@@ -1,3 +1,4 @@
+from operator import index
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -41,6 +42,40 @@ def returner(csv, frame):
 def get_points_of_defenders(defenders, index):
     return [defender.getxyloc(index) for defender in defenders]
 
+def get_lines_from_delaunay(triangles,defenders):
+    #Splitting the delaunay triangles into their sides
+    index_pairs = []
+    for tri in triangles.simplices:
+        index_pairs.append(tri[0:2])
+        index_pairs.append(tri[1:])
+        index_pairs.append(tri[::2])
+
+    #finding the defenders at the end of each line
+    defender_pairs = []
+    for pair in index_pairs:
+        defender_pairs.append([defenders[pair[0]],defenders[pair[1]]])
+
+    #finding the equally spaced points between each defender pair
+    points = []
+    for pair in defender_pairs:
+        #21 is arbitrary, but then the head of the list is removed because it's on top of a defender 
+        points.append(np.linspace(pair[0],pair[1],21,endpoint=False)[1:])
+    points = np.array(points)
+    return np.reshape(points,(-1,2))
+
+#calculating the arrival time of each defender to each point in the window, but only keeping the min time
+def get_arrival_times(points,defenders):
+    times = []
+    for p in points:
+        min_dist = float('inf')
+        for d in defenders:
+            dist = np.linalg.norm(d-p)
+            if dist < min_dist:
+                min_dist = dist
+        # ! This is the speed which needs to be variable later !
+        time = min_dist / 7
+        times.append(time)
+    return times
 
 
 # Find defensive locations in each frame
@@ -68,11 +103,18 @@ for player in np.unique(csv['displayName']):
 
 for frame in range(size):
     points_def = np.array(get_points_of_defenders(defenders, frame))
+    arrival_points = None
     points_off = np.array(get_points_of_defenders(attackers, frame))
     tri = Delaunay(points_def)
+    lines = get_lines_from_delaunay(tri,points_def)
+    times = get_arrival_times(lines,points_def)
+
     plt.triplot(points_def[:,0], points_def[:,1], tri.simplices)
-    plt.plot(points_def[:,0], points_def[:,1], 'o', c='r', label='Defenders')
+    plt.plot(points_def[:,0], points_def[:,1], 'o', c='r',label='Defenders')
     plt.plot(points_off[:,0], points_off[:,1], 'o', c='b', label='Attackers')
+    p = plt.scatter(lines[:,0],lines[:,1],c=times, cmap = "RdYlGn",marker="s",s=5)
+    cbar = fig.colorbar(p)
+    cbar.set_label("Expected defender arrival time (s)")
     plt.legend(loc='best')
     plt.xlim([0, 120])
     plt.ylim([0, 53.3])
@@ -81,4 +123,5 @@ for frame in range(size):
     if frame < size-1:
         plt.pause(0.05)
         ax.clear()
+        fig.clear()
 plt.show()
