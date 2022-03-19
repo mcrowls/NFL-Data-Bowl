@@ -1,6 +1,7 @@
 import matplotlib
 
-from delaunay_triangulations import Player, get_points_of_defenders, returner
+from delaunay_triangulations import Player, get_points_of_defenders, returner, get_lines_from_delaunay, \
+    get_arrival_times
 
 matplotlib.use("TkAgg")
 import matplotlib.patches as patches
@@ -124,30 +125,58 @@ def animate_return(csv):
         team = csv[csv['displayName'] == player]['team'].iloc[0]
         if team == attacking_team:
             attackers.append(Player(player, player_csv['x'], player_csv['y'], team, 0.6))
-        else:
+        elif team != "football":
             defenders.append(Player(player, player_csv['x'], player_csv['y'], team, 0.6))
-
+    ball_df = csv.sort_values(['frameId'], ascending=True)
+    ball_df = ball_df[ball_df.team == "football"][receive_frame:]
+    balls = list(zip(ball_df.x.tolist(), ball_df.y.tolist()))
     fig, ax = drawPitch(100, 53.3)
-    for frame in range(size):
-        points_def = np.array(get_points_of_defenders(defenders, frame))
-        points_off = np.array(get_points_of_defenders(attackers, frame))
-        tri = Delaunay(points_def)
 
-        # plt.triplot(points_def[:,0], points_def[:,1], tri.simplices)
-        defensive, = ax.plot(points_def[:, 0], points_def[:, 1], 'o', markersize=10, markerfacecolor="r",
+    #DO CALC BEFORE TO SPEED UP VISUALS
+    points_def = []
+    points_off = []
+    lines = []
+    times = []
+
+    for frame in range(size):
+        points_def.append(np.array(get_points_of_defenders(defenders, frame)))
+        points_off.append(np.array(get_points_of_defenders(attackers, frame)))
+        tri = Delaunay(points_def[frame])
+        lines.append(get_lines_from_delaunay(tri, points_def[frame]))
+        times.append(get_arrival_times(lines[frame], points_def[frame], points_off[frame]))
+
+
+
+
+    for frame in range(size):
+        # points_def = np.array(get_points_of_defenders(defenders, frame))
+        # points_off = np.array(get_points_of_defenders(attackers, frame))
+        # tri = Delaunay(points_def)
+        # lines = get_lines_from_delaunay(tri, points_def)
+        # times = get_arrival_times(lines, points_def, points_off)
+        # PLOT EVERYTHING
+        defensive, = ax.plot(points_def[frame][:, 0], points_def[frame][:, 1], 'o', markersize=10, markerfacecolor="r",
                              markeredgewidth=1, markeredgecolor="white",
                              zorder=7, label='Defenders')
-        offensive, = ax.plot(points_off[:, 0], points_off[:, 1], 'o', markersize=10, markerfacecolor="b",
+        offensive, = ax.plot(points_off[frame][:, 0], points_off[frame][:, 1], 'o', markersize=10, markerfacecolor="b",
                              markeredgewidth=1, markeredgecolor="white",
                              zorder=7, label='Attackers')
-        triang = ax.triplot(*points_def.T, tri.simplices, color="black")
+        ball, = ax.plot(balls[frame][0], balls[frame][1], 'o', markersize=8, markerfacecolor="black", markeredgewidth=1, markeredgecolor="white",
+                    zorder=7)
+
+        #triang = ax.triplot(*points_def.T, tri.simplices, color="black")
+
+        p = ax.scatter(lines[frame][:, 0], lines[frame][:, 1], c=times[frame], cmap="YlOrRd", marker="s", s=5)
+
 
         if frame < size - 1:
-            plt.pause(0.1)
+            plt.pause(0.05)
+            p.remove()
             offensive.remove()
             defensive.remove()
-            triang[0].remove()
-            triang[1].remove()
+            ball.remove()
+            #triang[0].remove()
+            #triang[1].remove()
 
     plt.show()
 

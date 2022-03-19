@@ -124,27 +124,27 @@ for player in np.unique(csv['displayName']):
     else:
         defenders.append(Player(player, player_csv['x'], player_csv['y'], team, 0.6))
 
-for frame in range(size):
-    points_def = np.array(get_points_of_defenders(defenders, frame))
-    arrival_points = None
-    points_off = np.array(get_points_of_defenders(attackers, frame))
-    tri = Delaunay(points_def)
-    lines = get_lines_from_delaunay(tri,points_def)
-    times = get_arrival_times(lines,points_def,points_off)
-
-    plt.triplot(points_def[:,0], points_def[:,1], tri.simplices)
-    plt.plot(points_def[:,0], points_def[:,1], 'o', c='r',label='Defenders')
-    plt.plot(points_off[:,0], points_off[:,1], 'o', c='b', label='Attackers')
-    p = plt.scatter(lines[:,0],lines[:,1],c=times, cmap = "RdYlGn",marker="s",s=5)
-    cbar = fig.colorbar(p)
-    cbar.set_label("Expected defender arrival time (s)")
-    plt.legend(loc='best')
-    plt.xlim([0, 120])
-    plt.ylim([0, 53.3])
-    plt.xlabel('x')
-    plt.ylabel('y')
-    if frame < size-1:
-        plt.pause(0.05)
-        ax.clear()
-        fig.clear()
-plt.show()
+# for frame in range(size):
+#     points_def = np.array(get_points_of_defenders(defenders, frame))
+#     arrival_points = None
+#     points_off = np.array(get_points_of_defenders(attackers, frame))
+#     tri = Delaunay(points_def)
+#     lines = get_lines_from_delaunay(tri,points_def)
+#     times = get_arrival_times(lines,points_def,points_off)
+#
+#     plt.triplot(points_def[:,0], points_def[:,1], tri.simplices)
+#     plt.plot(points_def[:,0], points_def[:,1], 'o', c='r',label='Defenders')
+#     plt.plot(points_off[:,0], points_off[:,1], 'o', c='b', label='Attackers')
+#     p = plt.scatter(lines[:,0],lines[:,1],c=times, cmap = "RdYlGn",marker="s",s=5)
+#     cbar = fig.colorbar(p)
+#     cbar.set_label("Expected defender arrival time (s)")
+#     plt.legend(loc='best')
+#     plt.xlim([0, 120])
+#     plt.ylim([0, 53.3])
+#     plt.xlabel('x')
+#     plt.ylabel('y')
+#     if frame < size-1:
+#         plt.pause(0.05)
+#         ax.clear()
+#         fig.clear()
+# plt.show()
