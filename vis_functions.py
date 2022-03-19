@@ -114,11 +114,13 @@ def extract_one_game(game):
 
 
 def animate_return(csv):
+
     receive_frame = csv[csv['event'] == 'punt_received']['frameId'].iloc[0]
     punt_returner = returner(csv, receive_frame)
     attacking_team = csv[csv['displayName'] == punt_returner]['team'].iloc[0]
     attackers = []
     defenders = []
+
     for player in np.unique(csv['displayName']):
         player_csv = csv[csv['displayName'] == player][receive_frame:]
         size = np.shape(player_csv)[0]
@@ -127,6 +129,11 @@ def animate_return(csv):
             attackers.append(Player(player, player_csv['x'], player_csv['y'], team, 0.6))
         elif team != "football":
             defenders.append(Player(player, player_csv['x'], player_csv['y'], team, 0.6))
+
+    returner_pos = csv[csv['displayName'] == punt_returner][receive_frame:]
+    returner_pos = list(zip(returner_pos.x.tolist(), returner_pos.y.tolist()))
+
+
     ball_df = csv.sort_values(['frameId'], ascending=True)
     ball_df = ball_df[ball_df.team == "football"][receive_frame:]
     balls = list(zip(ball_df.x.tolist(), ball_df.y.tolist()))
@@ -138,6 +145,7 @@ def animate_return(csv):
     lines = []
     times = []
 
+    # Get data before for smooth animation
     for frame in range(size):
         points_def.append(np.array(get_points_of_defenders(defenders, frame)))
         points_off.append(np.array(get_points_of_defenders(attackers, frame)))
@@ -145,28 +153,23 @@ def animate_return(csv):
         lines.append(get_lines_from_delaunay(tri, points_def[frame]))
         times.append(get_arrival_times(lines[frame], points_def[frame], points_off[frame]))
 
-
-
-
     for frame in range(size):
-        # points_def = np.array(get_points_of_defenders(defenders, frame))
-        # points_off = np.array(get_points_of_defenders(attackers, frame))
-        # tri = Delaunay(points_def)
-        # lines = get_lines_from_delaunay(tri, points_def)
-        # times = get_arrival_times(lines, points_def, points_off)
         # PLOT EVERYTHING
+        retur = ax.text(returner_pos[frame][0]-0.5, returner_pos[frame][1]-0.5, 'R', zorder=15, c="pink")
+
         defensive, = ax.plot(points_def[frame][:, 0], points_def[frame][:, 1], 'o', markersize=10, markerfacecolor="r",
                              markeredgewidth=1, markeredgecolor="white",
-                             zorder=7, label='Defenders')
+                             zorder=5, label='Defenders')
         offensive, = ax.plot(points_off[frame][:, 0], points_off[frame][:, 1], 'o', markersize=10, markerfacecolor="b",
                              markeredgewidth=1, markeredgecolor="white",
-                             zorder=7, label='Attackers')
+                             zorder=5, label='Attackers')
         ball, = ax.plot(balls[frame][0], balls[frame][1], 'o', markersize=8, markerfacecolor="black", markeredgewidth=1, markeredgecolor="white",
-                    zorder=7)
+                    zorder=10)
 
         #triang = ax.triplot(*points_def.T, tri.simplices, color="black")
 
         p = ax.scatter(lines[frame][:, 0], lines[frame][:, 1], c=times[frame], cmap="YlOrRd", marker="s", s=5)
+
 
 
         if frame < size - 1:
@@ -175,85 +178,9 @@ def animate_return(csv):
             offensive.remove()
             defensive.remove()
             ball.remove()
+            retur.remove()
             #triang[0].remove()
             #triang[1].remove()
 
     plt.show()
 
-#
-# def animate_one_play(df, delaunay=False):
-#     fig, ax = drawPitch(100, 53.3)
-#
-#     home, away, balls = extract_one_game(df)
-#
-#     team_left, = ax.plot([], [], 'o', markersize=10, markerfacecolor="r", markeredgewidth=1, markeredgecolor="white",
-#                          zorder=7)
-#     team_right, = ax.plot([], [], 'o', markersize=10, markerfacecolor="b", markeredgewidth=1, markeredgecolor="white",
-#                           zorder=7)
-#     ball, = ax.plot([], [], 'o', markersize=8, markerfacecolor="black", markeredgewidth=1, markeredgecolor="white",
-#                     zorder=7)
-#     #lines, = ax.triplot([],[])
-#
-#
-#     #drawings = [team_left, team_right, ball, lines]
-#     drawings = [team_left, team_right, ball]
-#
-#     def init():
-#         team_left.set_data([], [])
-#         team_right.set_data([], [])
-#         ball.set_data([], [])
-#
-#         #lines.set_data([],[])
-#
-#         return drawings
-#
-#     def draw_teams(i):
-#         X = []
-#         Y = []
-#         for k, v in home.items():
-#             x, y = v[i]
-#             X.append(x)
-#             Y.append(y)
-#         team_left.set_data(X, Y)
-#
-#         X = []
-#         Y = []
-#         for k, v in away.items():
-#             x, y = v[i]
-#             X.append(x)
-#             Y.append(y)
-#         team_right.set_data(X, Y)
-#
-#     def animate(i):
-#         draw_teams(i)
-#         x, y = balls[i]
-#         ball.set_data([x, y])
-#
-#         # if delaunay:
-#         #     csv = df
-#         #     receive_frame = csv[csv['event'] == 'punt_received']['frameId'].iloc[0]
-#         #     punt_returner = returner(csv, receive_frame)
-#         #     attacking_team = csv[csv['displayName'] == punt_returner]['team'].iloc[0]
-#         #     attackers = []
-#         #     defenders = []
-#         #     for player in np.unique(csv['displayName']):
-#         #         player_csv = csv[csv['displayName'] == player]
-#         #         size = np.shape(player_csv)[0]
-#         #         team = csv[csv['displayName'] == player]['team'].iloc[0]
-#         #         if team == attacking_team:
-#         #             attackers.append(Player(player, player_csv['x'], player_csv['y'], team, 0.6))
-#         #         else:
-#         #             defenders.append(Player(player, player_csv['x'], player_csv['y'], team, 0.6))
-#         #
-#         #     points_def = np.array(get_points_of_defenders(defenders, i))
-#         #     tri = Delaunay(points_def)
-#         #     #lines.set_data(*points_def.T, tri.simplices)
-#         #     ax.triplot(points_def[:,0], points_def[:,1], tri.simplices)
-#         return drawings
-#     # !May take a while!
-#     anim = animation.FuncAnimation(fig, animate, init_func=init,
-#                                    frames=len(balls), interval=100, blit=False)
-#
-#
-#     #plt.show()
-#     return anim #HTML(anim.to_html5_video())
