@@ -150,9 +150,6 @@ def animate_return(csv, delaunay=False):
         points_def.append(np.array(get_points_of_defenders(defenders, frame)))
         points_off.append(np.array(get_points_of_defenders(attackers, frame)))
         if delaunay:
-            tri = Delaunay(points_def[frame])
-            lines.append(get_lines_from_delaunay(tri, points_def[frame]))
-            times.append(get_arrival_times(lines[frame], points_def[frame], points_off[frame]))
             bounds = ConvexHull(points_def[frame]).vertices
             for element in bounds:
                 bound_points_x.append(points_def[frame][element][0])
@@ -162,6 +159,10 @@ def animate_return(csv, delaunay=False):
             outer_layer_y.append(bound_points_y)
             bound_points_x = []
             bound_points_y = []
+
+        tri = Delaunay(points_def[frame])
+        lines.append(get_lines_from_delaunay(tri, points_def[frame]))
+        times.append(get_arrival_times(lines[frame], points_def[frame], points_off[frame]))
 
     for frame in range(size):
         # PLOT EVERYTHING
