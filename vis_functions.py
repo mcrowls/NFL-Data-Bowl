@@ -161,8 +161,8 @@ def animate_return(csv, delaunay=False):
             bound_points_y = []
 
         tri = Delaunay(points_def[frame])
-        lines.append(get_lines_from_delaunay(tri, points_def[frame]))
-        times.append(get_arrival_times(lines[frame], points_def[frame], points_off[frame]))
+        lines.append(get_lines_from_delaunay(tri, defenders,frame))
+        times.append(get_arrival_times(lines[frame], defenders, attackers,frame))
 
     for frame in range(size):
         # PLOT EVERYTHING
@@ -186,7 +186,6 @@ def animate_return(csv, delaunay=False):
         if delaunay:
             p = ax.scatter(lines[frame][:, 0], lines[frame][:, 1], c=times[frame], cmap="YlOrRd", marker="s", s=5, zorder=15)
             out_layer, = ax.plot(outer_layer_x[frame], outer_layer_y[frame], 'o',markersize=4, markerfacecolor="purple", zorder=15)
-
 
 
         if frame < size - 1:
