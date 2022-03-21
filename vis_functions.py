@@ -181,7 +181,7 @@ def animate_return(csv, delaunay=False):
 
 
 
-        #triang = ax.triplot(*points_def.T, tri.simplices, color="black")
+        # triang = ax.triplot(*points_def.T, tri.simplices, color="black")
         if delaunay:
             p = ax.scatter(lines[frame][:, 0], lines[frame][:, 1], c=times[frame], cmap="YlOrRd", marker="s", s=5)
             out_layer, = ax.plot(outer_layer_x[frame], outer_layer_y[frame], 'o',markersize=4, markerfacecolor="purple", zorder=15)
@@ -203,4 +203,3 @@ def animate_return(csv, delaunay=False):
             #triang[1].remove()
 
     plt.show()
-
