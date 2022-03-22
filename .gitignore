@@ -3,3 +3,4 @@ data/tracking2019.csv
 data/tracking2020.csv
 data/receiving_plays/**
 venv/**
+__pycache__/

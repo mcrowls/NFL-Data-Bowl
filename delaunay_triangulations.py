@@ -32,7 +32,7 @@ def returner(csv, frame):
 def get_points_of_defenders(defenders, index):
     return [defender.getxyloc(index) for defender in defenders]
 
-def get_lines_from_delaunay(triangles,defenders):
+def get_lines_from_delaunay(triangles,defenders,frame):
     #Splitting the delaunay triangles into their sides
     index_pairs = []
     for tri in triangles.simplices:
@@ -43,7 +43,7 @@ def get_lines_from_delaunay(triangles,defenders):
     #finding the defenders at the end of each line
     defender_pairs = []
     for pair in index_pairs:
-        defender_pairs.append([defenders[pair[0]],defenders[pair[1]]])
+        defender_pairs.append([defenders[pair[0]].getxyloc(frame),defenders[pair[1]].getxyloc(frame)])
 
     #finding the equally spaced points between each defender pair
     points = []

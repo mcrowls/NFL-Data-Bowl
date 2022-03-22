@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 from scipy.spatial import Delaunay, ConvexHull, convex_hull_plot_2d
 from helpers import get_play_description_from_number, inputpath, playpath
+import time
 
 
 
@@ -123,6 +124,7 @@ def animate_return(csv, delaunay=False):
     for player in np.unique(csv['displayName']):
         player_csv = csv[csv['displayName'] == player][receive_frame:]
         size = np.shape(player_csv)[0]
+        #size = 10
         team = csv[csv['displayName'] == player]['team'].iloc[0]
         if team == attacking_team:
             attackers.append(Player(player, player_csv['x'], player_csv['y'], team, 0.6))
@@ -148,8 +150,10 @@ def animate_return(csv, delaunay=False):
     outer_layer_x = []
     outer_layer_y = []
 
+    start_time = time.time()
     # Get data before for smooth animation
     for frame in range(size):
+        print("Processed frame", frame, "/",size,"||",round((frame/size)*100,3),"%")
         points_def.append(np.array(get_points_of_defenders(defenders, frame)))
         points_off.append(np.array(get_points_of_defenders(attackers, frame)))
         if delaunay:
@@ -166,7 +170,9 @@ def animate_return(csv, delaunay=False):
         tri = Delaunay(points_def[frame])
         lines.append(get_lines_from_delaunay(tri, defenders,frame))
         times.append(get_arrival_times(lines[frame], defenders, attackers,frame))
-
+    end_time = time.time()
+    print("Took",round(end_time-start_time,2),"s to process",size,"frames")
+    
     for frame in range(size):
         # PLOT EVERYTHING
         retur = ax.text(returner_pos[frame][0]-0.5, returner_pos[frame][1]-0.5, 'R', zorder=15, c="pink")
