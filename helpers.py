@@ -5,7 +5,7 @@ import os
 """## Edit These"""
 input_folderpath = "data"
 output_folderpath = "data"
-play_folderpath = 'receiving_plays/play116-game2021010301.csv'
+play_folderpath = 'play116-game2021010301.csv'
 drive_folderpath = "Colab Notebooks"
 useDrive = False
 avg_player_speed = 7
@@ -16,7 +16,7 @@ avg_player_speed = 7
 drivepath = 'drive/MyDrive/'+drive_folderpath+"/"
 inputpath = drivepath+input_folderpath+"/" if useDrive else input_folderpath+"/"
 outputpath = drivepath+output_folderpath+"/" if useDrive else output_folderpath+"/"
-playpath = inputpath+play_folderpath
+playpath = inputpath+"receiving_plays/"+play_folderpath
 #drivepath = 'drive\\MyDrive\\'+drive_folderpath+"\\"
 #inputpath = drivepath+input_folderpath+"\\" if useDrive else input_folderpath+"\\"
 #outputpath = drivepath+output_folderpath+"\\" if useDrive else output_folderpath+"\\"
