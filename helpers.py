@@ -5,7 +5,7 @@ import os
 """## Edit These"""
 input_folderpath = "data"
 output_folderpath = "data"
-play_folderpath = 'receiving_plays/play116-game2021010301.csv'
+play_folderpath = 'receiving_plays/play118-game2021010311.csv'
 drive_folderpath = "Colab Notebooks"
 useDrive = False
 

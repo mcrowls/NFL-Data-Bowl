@@ -1,4 +1,5 @@
 from operator import index
+from turtle import up, update
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -7,6 +8,7 @@ from skspatial.objects import Line
 from skspatial.objects import Point
 import math
 from players import Player
+from window import Window
 
 
 def distance(loc1, loc2):
@@ -47,11 +49,14 @@ def get_lines_from_delaunay(triangles,defenders,frame):
 
     #finding the equally spaced points between each defender pair
     points = []
+    windows = []
     for pair in defender_pairs:
-        #21 is arbitrary, but then the head of the list is removed because it's on top of a defender 
-        points.append(np.linspace(pair[0],pair[1],21,endpoint=False)[1:])
+        #21 is arbitrary, but then the head of the list is removed because it's on top of a defender
+        line =  np.linspace(pair[0],pair[1],21,endpoint=False)[1:]
+        points.append(line)
+        windows.append(Window(line,0,[0,0]))
     points = np.array(points)
-    return np.reshape(points,(-1,2))
+    return np.reshape(points,(-1,2)), windows
 
 #calculating the arrival time of each defender to each point in the window, but only keeping the min time
 #These comments came from the competition code, detailing how to calculate the time penalty each blocker imposes on a defender
@@ -62,34 +67,44 @@ def get_lines_from_delaunay(triangles,defenders,frame):
   #      perpendicular projection and x = the blocker's distance away from the perpendicular projection 
   #      to obtain the time penalty for the defender based on the blocker's position (multiplied by the)
   #      max_time_penalty parameter
-def get_arrival_times(points,defenders, blockers, frame):
+def get_arrival_times(windows,defenders, blockers, frame):
     times = []
-    for p in points:
-        min_dist = float('inf')
-        defender_speed = 0
-        for d in defenders:
-            dist = np.linalg.norm(d.getxyloc(frame)-p)
-            #finding the closest defender to the point, and saving their speed
-            if dist < min_dist:
-                min_dist = dist
-                defender_speed = d.speed
-        total_penalty = 0
-        for b in blockers:
-            #path connecting defender to target point
-            line = Line.from_points(Point(d.getxyloc(frame)),Point(p))
-            #projected point of blocker onto path
-            projected_point = line.project_point(b.getxyloc(frame))
-            defender_to_projection = np.linalg.norm(d.getxyloc(frame)-projected_point)
-            projection_to_target = min_dist - defender_to_projection
-            blocker_to_projection = np.linalg.norm(b.getxyloc(frame)-projected_point)
-            #if blocker projection is not between defender and target, penalty is 0
-            #Gaussian kernel uses a weighting term of 5, not sure why, the code used it before with no explanation
-            penalty = 0 if (defender_to_projection >= min_dist or projection_to_target >= min_dist) else 5 * (1 / ((defender_to_projection) * math.sqrt(2*math.pi))) * math.exp(-(1/2) * (blocker_to_projection/(defender_to_projection))**2)
-            total_penalty += penalty
+    updated_windows = []
+    for window in windows:
+        optimal_time = float("-inf")
+        optimal_point = []
+        for p in window.points:
+            min_dist = float('inf')
+            defender_speed = 0
+            for d in defenders:
+                dist = np.linalg.norm(d.getxyloc(frame)-p)
+                #finding the closest defender to the point, and saving their speed
+                if dist < min_dist:
+                    min_dist = dist
+                    defender_speed = d.speed
+            total_penalty = 0
+            for b in blockers:
+                #path connecting defender to target point
+                line = Line.from_points(Point(d.getxyloc(frame)),Point(p))
+                #projected point of blocker onto path
+                projected_point = line.project_point(b.getxyloc(frame))
+                defender_to_projection = np.linalg.norm(d.getxyloc(frame)-projected_point)
+                projection_to_target = min_dist - defender_to_projection
+                blocker_to_projection = np.linalg.norm(b.getxyloc(frame)-projected_point)
+                #if blocker projection is not between defender and target, penalty is 0
+                #Gaussian kernel uses a weighting term of 5, not sure why, the code used it before with no explanation
+                penalty = 0 if (defender_to_projection >= min_dist or projection_to_target >= min_dist) else 5 * (1 / ((defender_to_projection) * math.sqrt(2*math.pi))) * math.exp(-(1/2) * (blocker_to_projection/(defender_to_projection))**2)
+                total_penalty += penalty
         
-        time = min_dist / defender_speed + total_penalty
-        times.append(time)
-    return times
+            time = min_dist / defender_speed + total_penalty
+            times.append(time)
+            if time > optimal_time:
+                optimal_time = time
+                optimal_point = p
+        updated_windows.append(Window(window.points,time,optimal_point))
+        #window.optimal_time = time
+        #window.optimal_point = optimal_point
+    return times, updated_windows
 
 
 # Find defensive locations in each frame

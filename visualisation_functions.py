@@ -123,8 +123,8 @@ def animate_return(csv, delaunay=False):
 
     for player in np.unique(csv['displayName']):
         player_csv = csv[csv['displayName'] == player][receive_frame:]
-        size = np.shape(player_csv)[0]
-        #size = 10
+        #size = np.shape(player_csv)[0]
+        size = 3
         team = csv[csv['displayName'] == player]['team'].iloc[0]
         if team == attacking_team:
             attackers.append(Player(player, player_csv['x'], player_csv['y'], team, 0.6))
@@ -145,6 +145,7 @@ def animate_return(csv, delaunay=False):
     points_off = []
     lines = []
     times = []
+    optimal_points = []
     bound_points_x =[]
     bound_points_y = []
     outer_layer_x = []
@@ -152,8 +153,7 @@ def animate_return(csv, delaunay=False):
 
     start_time = time.time()
     # Get data before for smooth animation
-    for frame in range(size):
-        print("Processed frame", frame, "/",size,"||",round((frame/size)*100,3),"%")
+    for frame in range(size): 
         points_def.append(np.array(get_points_of_defenders(defenders, frame)))
         points_off.append(np.array(get_points_of_defenders(attackers, frame)))
         if delaunay:
@@ -168,11 +168,18 @@ def animate_return(csv, delaunay=False):
             bound_points_y = []
 
         tri = Delaunay(points_def[frame])
-        lines.append(get_lines_from_delaunay(tri, defenders,frame))
-        times.append(get_arrival_times(lines[frame], defenders, attackers,frame))
+        line, windows = get_lines_from_delaunay(tri,defenders,frame)
+        lines.append(line)
+        arrival_time, windows = get_arrival_times(windows,defenders,attackers,frame)
+        times.append(arrival_time)
+        o = []
+        for w in windows:
+            o.append(w.optimal_point)
+        optimal_points.append(o)
+        print("Processed frame", frame+1, "/",size,"||",round(((frame+1)/size)*100),"%")
+    
     end_time = time.time()
     print("Took",round(end_time-start_time,2),"s to process",size,"frames")
-    
     for frame in range(size):
         # PLOT EVERYTHING
         retur = ax.text(returner_pos[frame][0]-0.5, returner_pos[frame][1]-0.5, 'R', zorder=15, c="pink")
@@ -187,8 +194,7 @@ def animate_return(csv, delaunay=False):
                              zorder=5, label='Attackers')
         ball, = ax.plot(balls[frame][0], balls[frame][1], 'o', markersize=8, markerfacecolor="black", markeredgewidth=1, markeredgecolor="white",
                     zorder=10)
-
-
+        w = ax.scatter(np.array(optimal_points[frame])[:,0],np.array(optimal_points[frame])[:,1],c = "black",marker="x",zorder=16)
 
 
         # triang = ax.triplot(*points_def.T, tri.simplices, color="black")
@@ -198,7 +204,7 @@ def animate_return(csv, delaunay=False):
 
 
         if frame < size - 1:
-            plt.pause(0.05)
+            plt.pause(0.20)
             if delaunay:
                 p.remove()
                 out_layer.remove()
@@ -207,6 +213,7 @@ def animate_return(csv, delaunay=False):
             defensive.remove()
             ball.remove()
             retur.remove()
+            w.remove()
 
             #triang[0].remove()
             #triang[1].remove()
