@@ -15,7 +15,8 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as mpl
 import seaborn as sns
-from helpers import inputpath, outputpath, useDrive, get_more_specific_df, create_new_folder
+import os
+from helpers import inputpath, outputpath, useDrive, get_more_specific_df, create_new_folder, avg_player_speed
 
 # Uncomment if you want to save the processed data elsewhere, but run this on first run
 outpath = inputpath
@@ -28,8 +29,10 @@ if useDrive:
 def clean_players_data(inputpath_, outputpath_):
   players = pd.read_csv(inputpath_+"players.csv")
   players.columns = players.columns.str.replace(' ', '')
-  players
   """Converting all heights to inches"""
+  if type(players['height']) is not String:
+    print("! Warning: 'height' attribute is not String - assuming 'players' is clean !")
+    return players
   check = players['height'].str.split('-', expand=True)
   check.columns = ['feet', 'inches']
   check.loc[(check['inches'].notnull()), 'feet'] = check[check['inches'].notnull()]['feet'].astype(np.int16) * 12 + check[check['inches'].notnull()]['inches'].astype(np.int16)
@@ -45,6 +48,8 @@ def clean_players_data(inputpath_, outputpath_):
   cleaned_players = pd.read_csv(outputpath_+"players.csv")
   return cleaned_players
 
+print("*** Cleaning Data [0/4] ***")
+print("* Cleaning 'players.csv' [1/4] *")
 clean_players_data(inputpath, outpath)
 
 """# Cleaning NFL Plays Data"""
@@ -64,10 +69,14 @@ def clean_plays_data(inputpath_, outputpath_):
   fieldGoal.to_csv(outputpath_+"fieldGoal.csv",index=False)
   extraPoint.to_csv(outputpath_+"extraPoint.csv",index=False)
 
+print("* Cleaning 'plays.csv' [2/4] *")
 clean_plays_data(inputpath, outpath)
 
 """# Cleaning NFL Tracking Data for Player locations on Punts"""
 def clean_tracking_data(inputpath_, outputpath_, foldername):
+  if os.path.exists(outputpath_+foldername):
+        print("! Warning: folder 'recieving_plays' already exists - assuming tracking data is clean !")
+        return
   csv = pd.read_csv(inputpath_+'tracking2020.csv')
   receive_plays = get_more_specific_df(csv, 'event', 'punt_received')
   play_nos = np.unique(receive_plays['playId'])
@@ -83,4 +92,40 @@ def clean_tracking_data(inputpath_, outputpath_, foldername):
               if 'punt_received' in np.unique(new_df['event']):
                   new_df.to_csv(outputpath_+foldername+'/play' + str(id) + '-game' + str(game) + '.csv')
                   
+print("* Cleaning Tracking Data [3/4] *")
 clean_tracking_data(inputpath, outpath, "receiving_plays")
+
+"""# Cleaning Madden 2022 Data for Player Speeds"""
+def clean_madden_data(inputpath_, outputpath_):
+  ratings_csv = pd.read_csv(inputpath_+'madden_21_ratings.csv')
+  names = ratings_csv['Full Name']
+  speeds = ratings_csv['Speed']
+  accelerations = ratings_csv['Acceleration']
+  agilities = ratings_csv['Agility']
+
+  mean_speed = np.mean(speeds)
+  std_speed = np.std(speeds)
+  min_accel = np.min(accelerations)
+  max_accel = np.max(accelerations)
+  min_agility = np.min(agilities)
+  max_agility = np.max(agilities)
+
+  zs = list(map(lambda x: ((x - mean_speed)/std_speed), speeds))
+  accels = list(map(lambda x: (x - min_accel) / (max_accel - min_accel), accelerations))
+  agils = list(map(lambda x: (x - min_agility) / (max_agility - min_agility), agilities))
+
+  new_std_speed = std_speed*(avg_player_speed/mean_speed)
+
+  df = pd.DataFrame(columns=['Name', 'Speed (yards/s)', 'Acceleration (Standardised [0, 1] Metric)', 'Agility (Standardised [0, 1] Metric)'],
+      index=[j for j in range(np.size(speeds))])
+  for i in range(np.size(zs)):
+      speed = zs[i]*new_std_speed + avg_player_speed
+      acceleration = accels[i]
+      agility = agils[i]
+      df.loc[i, :] = [names[i], speed, acceleration, agility]
+  df.to_csv(outputpath_+'player_speeds.csv')
+  return df
+  
+print("* Cleaning 'madden_21_ratings.csv' [4/4] *")
+clean_madden_data(inputpath, outpath)
+print("*** Done - all Data cleaned ***")
