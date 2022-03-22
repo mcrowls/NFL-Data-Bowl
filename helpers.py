@@ -8,6 +8,8 @@ output_folderpath = "data"
 play_folderpath = 'receiving_plays/play116-game2021010301.csv'
 drive_folderpath = "Colab Notebooks"
 useDrive = False
+avg_player_speed = 7
+
 
 
 """## DO NOT EDIT These"""
