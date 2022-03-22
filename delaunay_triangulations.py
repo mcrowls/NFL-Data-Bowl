@@ -1,4 +1,5 @@
 from operator import index
+from re import M
 from turtle import up, update
 import pandas as pd
 import numpy as np
@@ -34,13 +35,20 @@ def returner(csv, frame):
 def get_points_of_defenders(defenders, index):
     return [defender.getxyloc(index) for defender in defenders]
 
+
 def get_lines_from_delaunay(triangles,defenders,frame):
     #Splitting the delaunay triangles into their sides
     index_pairs = []
-    for tri in triangles.simplices:
+    #array saving which triangle each window belongs to
+    delaunay_triangles = []
+    for idx,tri in enumerate(triangles.simplices):
         index_pairs.append(tri[0:2])
         index_pairs.append(tri[1:])
         index_pairs.append(tri[::2])
+        #each edge comes from a specific triangles, record those triangle indexes
+        delaunay_triangles.append(idx)
+        delaunay_triangles.append(idx)
+        delaunay_triangles.append(idx)
 
     #finding the defenders at the end of each line
     defender_pairs = []
@@ -55,6 +63,17 @@ def get_lines_from_delaunay(triangles,defenders,frame):
         line =  np.linspace(pair[0],pair[1],21,endpoint=False)[1:]
         points.append(line)
         windows.append(Window(line,0,[0,0]))
+    #assigning each window their triangle
+    for t,w in list(zip(delaunay_triangles,windows)):
+        windows[windows.index(w)].triangle = [t]
+        
+    #finding duplicate windows, where they have the same edges, combining those two windows and removing the other window
+    #because some windows can belong to two triangles
+    for window in windows:
+        for other_window in windows[windows.index(window)+1:]:
+            if np.array_equal(np.sort(window.points),np.sort(other_window.points)):
+                window.triangle.append(other_window.triangle[0])
+                windows.remove(other_window)
     points = np.array(points)
     return np.reshape(points,(-1,2)), windows
 
@@ -101,11 +120,38 @@ def get_arrival_times(windows,defenders, blockers, frame):
             if time > optimal_time:
                 optimal_time = time
                 optimal_point = p
-        updated_windows.append(Window(window.points,time,optimal_point))
-        #window.optimal_time = time
-        #window.optimal_point = optimal_point
+        updated_windows.append(Window(window.points,time,optimal_point,window.triangle))
     return times, updated_windows
 
+def find_lowest_f_node(nodes):
+    f = float('inf')
+    n = None
+    for node in nodes:
+        if node[1] < f:
+            f = node[1]
+            n = node
+    return n 
+
+
+#def create_window_neighbors(windows):
+
+
+def get_optimal_path(windows,carrier,end):
+    closed = []
+    open = []
+    #append closest window point from carrier to open with an f score of 0
+    open.append(("??",0))
+    while len(open) > 0:
+        current_node = find_lowest_f_node(open)
+        open.remove(current_node)
+        closed.append(current_node)
+
+        if current_node == end:
+            print("Done")
+            #path is the closed list?
+        
+        #children for a window are edges that form the same triangle
+    return None
 
 # Find defensive locations in each frame
 # Need to find the team on the ball and the defensive team

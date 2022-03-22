@@ -124,7 +124,7 @@ def animate_return(csv, delaunay=False):
     for player in np.unique(csv['displayName']):
         player_csv = csv[csv['displayName'] == player][receive_frame:]
         #size = np.shape(player_csv)[0]
-        size = 3
+        size = 1
         team = csv[csv['displayName'] == player]['team'].iloc[0]
         if team == attacking_team:
             attackers.append(Player(player, player_csv['x'], player_csv['y'], team, 0.6))
@@ -168,13 +168,18 @@ def animate_return(csv, delaunay=False):
             bound_points_y = []
 
         tri = Delaunay(points_def[frame])
+        # ! I don't think this line variable is needed anymore
         line, windows = get_lines_from_delaunay(tri,defenders,frame)
-        lines.append(line)
+        #lines.append(line)
         arrival_time, windows = get_arrival_times(windows,defenders,attackers,frame)
         times.append(arrival_time)
         o = []
+        l = []
         for w in windows:
             o.append(w.optimal_point)
+            l.append(w.points)
+        l = np.array(l)
+        lines.append(np.reshape(l,(-1,2)))
         optimal_points.append(o)
         print("Processed frame", frame+1, "/",size,"||",round(((frame+1)/size)*100),"%")
     
