@@ -133,23 +133,50 @@ def find_lowest_f_node(nodes):
     return n 
 
 
-#def create_window_neighbors(windows):
+def create_window_neighbors(windows):
+    for window in windows:
+        #need to find the other windows in the same triangle as the current window
+        #windows either have 2 or 4 neighbors
+        for other_window in windows:
+            if other_window ==  window:
+                continue
+            for triangle in window.triangle:
+                if triangle in other_window.triangle:
+                    window.neighbors.append(other_window)
+    return windows
 
 
 def get_optimal_path(windows,carrier,end):
-    closed = []
-    open = []
+    #find the closest windows to the carrier
+    min_dist = float('inf')
+    start_window = None
+    for window in windows:
+        if np.linalg.norm(carrier-window.optimal_point) < min_dist:
+            min_dist = np.linalg.norm(carrier-window.optimal_point)
+            start_window = window
+    closed_list = []
+    open_list = []
     #append closest window point from carrier to open with an f score of 0
-    open.append(("??",0))
-    while len(open) > 0:
-        current_node = find_lowest_f_node(open)
-        open.remove(current_node)
-        closed.append(current_node)
+    open_list.append(start_window)
+    while len(open_list) > 0:
+        current_node = find_lowest_f_node(open_list)
+        open_list.remove(current_node)
+        closed_list.append(current_node)
 
-        if current_node == end:
+        if current_node.optimal_point == end:
             print("Done")
             #path is the closed list?
-        
+        for neighbor in current_node.neighbors:
+            if neighbor in closed_list:
+                continue
+            neighbor.g = current_node.g + np.linalg.norm(neighbor.optimal_point - current_node.optimal_point)
+            neighbor.h = np.linalg.norm(neighbor.optimal_point - end)
+            neighbor.f = neighbor.g + neighbor.h
+
+            if neighbor in open_list:
+                if neighbor.g > open_list[open_list.index(neighbor)].g:
+                    continue
+            open_list.append(neighbor)
         #children for a window are edges that form the same triangle
     return None
 

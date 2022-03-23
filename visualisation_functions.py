@@ -1,5 +1,5 @@
 import matplotlib
-from delaunay_triangulations import Player, get_points_of_defenders, returner, get_lines_from_delaunay, \
+from delaunay_triangulations import Player, create_window_neighbors, get_points_of_defenders, returner, get_lines_from_delaunay, \
     get_arrival_times, get_defensive_locations
 matplotlib.use("TkAgg")
 import matplotlib.patches as patches
@@ -173,11 +173,15 @@ def animate_return(csv, delaunay=False):
         #lines.append(line)
         arrival_time, windows = get_arrival_times(windows,defenders,attackers,frame)
         times.append(arrival_time)
+        windows = create_window_neighbors(windows)
+        print(windows[0].neighbors[0].triangle)
         o = []
         l = []
         for w in windows:
             o.append(w.optimal_point)
             l.append(w.points)
+            #print(w.optimal_point)
+            #print(w.triangle)
         l = np.array(l)
         lines.append(np.reshape(l,(-1,2)))
         optimal_points.append(o)

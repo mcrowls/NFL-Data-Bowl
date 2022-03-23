@@ -4,3 +4,7 @@ class Window:
         self.optimal_time = optimal_time
         self.optimal_point = optimal_point
         self.triangle = triangle
+        self.neighbors = [] #a list of windows
+        self.g = 0
+        self.h = 0
+        self.f = 0
