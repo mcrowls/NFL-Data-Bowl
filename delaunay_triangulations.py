@@ -60,7 +60,7 @@ def get_lines_from_delaunay(triangles,defenders,frame):
     windows = []
     for pair in defender_pairs:
         #21 is arbitrary, but then the head of the list is removed because it's on top of a defender
-        line =  np.linspace(pair[0],pair[1],21,endpoint=False)[1:]
+        line =  np.linspace(pair[0],pair[1],22,endpoint=False)[1:]
         points.append(line)
         windows.append(Window(line,0,[0,0]))
     #assigning each window their triangle
@@ -70,10 +70,19 @@ def get_lines_from_delaunay(triangles,defenders,frame):
     #finding duplicate windows, where they have the same edges, combining those two windows and removing the other window
     #because some windows can belong to two triangles
     for window in windows:
-        for other_window in windows[windows.index(window)+1:]:
-            if np.array_equal(np.sort(window.points),np.sort(other_window.points)):
+        #print("Current window",window.triangle,list(np.sort(window.points,axis=None)))
+        #g = input("")
+        for other_window in windows:
+            #print("Other window",other_window.triangle,list(np.sort(other_window.points,axis=None)))
+            #g = input("")
+            if other_window == window:
+                continue
+            #if np.array_equal(np.sort(window.points,axis=None),np.sort(other_window.points,axis=None)):
+            if np.allclose(np.sort(window.points,axis=None),np.sort(other_window.points,axis=None)):
+                #print("Found duplicate window",other_window.triangle,list(np.sort(other_window.points,axis=None)))
                 window.triangle.append(other_window.triangle[0])
                 windows.remove(other_window)
+    #print("WINDOWS LENGTH",len(windows))
     points = np.array(points)
     return np.reshape(points,(-1,2)), windows
 
@@ -127,8 +136,8 @@ def find_lowest_f_node(nodes):
     f = float('inf')
     n = None
     for node in nodes:
-        if node[1] < f:
-            f = node[1]
+        if node.f < f:
+            f = node.f
             n = node
     return n 
 
@@ -141,7 +150,7 @@ def create_window_neighbors(windows):
             if other_window ==  window:
                 continue
             for triangle in window.triangle:
-                if triangle in other_window.triangle:
+                if triangle in other_window.triangle and other_window.optimal_point[0]<= window.optimal_point[0]:
                     window.neighbors.append(other_window)
     return windows
 
@@ -150,10 +159,16 @@ def get_optimal_path(windows,carrier,end):
     #find the closest windows to the carrier
     min_dist = float('inf')
     start_window = None
+    #assuming end is an x y point, need to find the window closest to the end
+    min_dist_end = float('inf')
+    end_window = None
     for window in windows:
         if np.linalg.norm(carrier-window.optimal_point) < min_dist:
             min_dist = np.linalg.norm(carrier-window.optimal_point)
             start_window = window
+        if np.linalg.norm(end-window.optimal_point) < min_dist_end:
+            min_dist_end = np.linalg.norm(end-window.optimal_point)
+            end_window = window
     closed_list = []
     open_list = []
     #append closest window point from carrier to open with an f score of 0
@@ -163,9 +178,9 @@ def get_optimal_path(windows,carrier,end):
         open_list.remove(current_node)
         closed_list.append(current_node)
 
-        if current_node.optimal_point == end:
+        if np.array_equal(current_node.optimal_point,end_window.optimal_point):
             print("Done")
-            #path is the closed list?
+            return closed_list
         for neighbor in current_node.neighbors:
             if neighbor in closed_list:
                 continue
@@ -174,11 +189,10 @@ def get_optimal_path(windows,carrier,end):
             neighbor.f = neighbor.g + neighbor.h
 
             if neighbor in open_list:
-                if neighbor.g > open_list[open_list.index(neighbor)].g:
+                if neighbor.g >= open_list[open_list.index(neighbor)].g:
                     continue
             open_list.append(neighbor)
-        #children for a window are edges that form the same triangle
-    return None
+    return closed_list
 
 # Find defensive locations in each frame
 # Need to find the team on the ball and the defensive team

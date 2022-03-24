@@ -1,5 +1,5 @@
 import matplotlib
-from delaunay_triangulations import Player, create_window_neighbors, get_points_of_defenders, returner, get_lines_from_delaunay, \
+from delaunay_triangulations import Player, create_window_neighbors, get_optimal_path, get_points_of_defenders, returner, get_lines_from_delaunay, \
     get_arrival_times, get_defensive_locations
 matplotlib.use("TkAgg")
 import matplotlib.patches as patches
@@ -133,7 +133,7 @@ def animate_return(csv, delaunay=False):
 
     returner_pos = csv[csv['displayName'] == punt_returner][receive_frame:]
     returner_pos = list(zip(returner_pos.x.tolist(), returner_pos.y.tolist()))
-
+    
 
     ball_df = csv.sort_values(['frameId'], ascending=True)
     ball_df = ball_df[ball_df.team == "football"][receive_frame:]
@@ -146,6 +146,7 @@ def animate_return(csv, delaunay=False):
     lines = []
     times = []
     optimal_points = []
+    optimal_paths = []
     bound_points_x =[]
     bound_points_y = []
     outer_layer_x = []
@@ -174,14 +175,15 @@ def animate_return(csv, delaunay=False):
         arrival_time, windows = get_arrival_times(windows,defenders,attackers,frame)
         times.append(arrival_time)
         windows = create_window_neighbors(windows)
-        print(windows[0].neighbors[0].triangle)
+        optimal_path = get_optimal_path(windows,[returner_pos[frame][0],returner_pos[frame][1]],[10,25])
+        optimal_path_points = []
+        for window in optimal_path:
+            optimal_path_points.append(window.optimal_point)
         o = []
         l = []
         for w in windows:
             o.append(w.optimal_point)
             l.append(w.points)
-            #print(w.optimal_point)
-            #print(w.triangle)
         l = np.array(l)
         lines.append(np.reshape(l,(-1,2)))
         optimal_points.append(o)
@@ -191,6 +193,19 @@ def animate_return(csv, delaunay=False):
     print("Took",round(end_time-start_time,2),"s to process",size,"frames")
     for frame in range(size):
         # PLOT EVERYTHING
+        ax.scatter(np.array(optimal_path_points)[:,0],np.array(optimal_path_points)[:,1],marker="*",c="pink",zorder=17)
+        
+        """for window in windows:
+            t = str(round(window.optimal_point[0],1))+" "+str(round(window.optimal_point[1],1))
+            #ax.text(window.optimal_point[0]-0.5,window.optimal_point[1]-0.5,t)
+            tt = ""
+            for tri in window.triangle:
+                tt = tt+" "+str(tri)
+            ax.text(window.optimal_point[0]+0.1,window.optimal_point[1]+0.1,tt,c="pink")"""
+        
+        for path in optimal_path[:len(optimal_path)-1]:
+            next_point = optimal_path[optimal_path.index(path)+1]
+            ax.arrow(path.optimal_point[0],path.optimal_point[1],next_point.optimal_point[0]-path.optimal_point[0],next_point.optimal_point[1]-path.optimal_point[1])
         retur = ax.text(returner_pos[frame][0]-0.5, returner_pos[frame][1]-0.5, 'R', zorder=15, c="pink")
 
         return_line, = ax.plot([returner_pos[frame][0], returner_pos[frame][0]], [0, 53.3], "--", zorder=5, c="black")
@@ -204,7 +219,6 @@ def animate_return(csv, delaunay=False):
         ball, = ax.plot(balls[frame][0], balls[frame][1], 'o', markersize=8, markerfacecolor="black", markeredgewidth=1, markeredgecolor="white",
                     zorder=10)
         w = ax.scatter(np.array(optimal_points[frame])[:,0],np.array(optimal_points[frame])[:,1],c = "black",marker="x",zorder=16)
-
 
         # triang = ax.triplot(*points_def.T, tri.simplices, color="black")
         if delaunay:
