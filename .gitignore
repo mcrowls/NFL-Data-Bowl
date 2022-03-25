@@ -4,3 +4,6 @@ data/tracking2020.csv
 data/receiving_plays/**
 venv/**
 __pycache__/
+data/.DS_Store
+.ipynb_checkpoints/
+
