@@ -223,7 +223,7 @@ def get_optimal_path(windows,carrier,end):
 
             #if the neighbor is not in the closed list, need to calculate the heuristic
 
-            neighbor = get_heuristic(current_node,neighbor,end,carrier)
+            neighbor = get_heuristic(current_node,neighbor,end)
 
             #if this neighbor is in the open list already, and it's g value in the open list is less than the g value just calculated, do nothing
             #because the neighbor in the open list is better
