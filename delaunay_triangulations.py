@@ -4,6 +4,7 @@ from turtle import up, update
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+#from pyrsistent import T
 from scipy.spatial import Delaunay
 from skspatial.objects import Line
 from skspatial.objects import Point
@@ -153,8 +154,17 @@ def create_window_neighbors(windows):
             for triangle in window.triangle:
                 if triangle in other_window.triangle and other_window.optimal_point[0]<= window.optimal_point[0]:
                     window.neighbors.append(other_window)
+                    other_window.parent = window
     return windows
 
+def get_heuristic(current_node,neighbor,end):
+    neighbor.g = current_node.g + np.linalg.norm(neighbor.optimal_point - current_node.optimal_point)
+    #neighbor.g = current_node.g + neighbor.optimal_time
+
+    #h is the distance from the neighbor node to the end, only in the x direction
+    neighbor.h = np.linalg.norm(neighbor.optimal_point[0] - end[0])
+    neighbor.f = neighbor.g + neighbor.h
+    return neighbor
 
 def get_optimal_path(windows,carrier,end):
     #find the closest windows to the carrier
@@ -182,14 +192,22 @@ def get_optimal_path(windows,carrier,end):
         current_node = find_lowest_f_node(open_list)
         open_list.remove(current_node)
         closed_list.append(current_node)
+        for o in open_list:
+            print(o.optimal_point)
+        for c in closed_list:
+            print(c.optimal_point)
 
         #if the current node is the end node, we're done
         if np.array_equal(current_node.optimal_point,end_window.optimal_point):
             print("Done")
-            for i in closed_list:
-                print(i.optimal_point)
-            #! return the closed list, is this the correct list to return?
-            return closed_list
+            
+            the_path = []
+            while current_node.parent != None:
+                the_path.append(current_node)
+                current_node = current_node.parent
+            the_path.append(start_window)
+
+            return the_path
         
         #for all the neighbors for a window, check if they are already in the closed list, if so, do nothing
         for neighbor in current_node.neighbors:
@@ -198,22 +216,19 @@ def get_optimal_path(windows,carrier,end):
 
             #if the neighbor is not in the closed list, need to calculate the heuristic
 
-            #What heuristic should be used for the windows? Distance or time?
-            neighbor.g = current_node.g + np.linalg.norm(neighbor.optimal_point - current_node.optimal_point)
-            #neighbor.g = current_node.g + neighbor.optimal_time
-
-            #h is the distance from the neighbor node to the end, only in the x direction
-            neighbor.h = np.linalg.norm(neighbor.optimal_point[0] - end[0])
-            neighbor.f = neighbor.g + neighbor.h
+            neighbor = get_heuristic(current_node,neighbor,end)
 
             #if this neighbor is in the open list already, and it's g value in the open list is less than the g value just calculated, do nothing
             #because the neighbor in the open list is better
             if neighbor in open_list:
                 if neighbor.g >= open_list[open_list.index(neighbor)].g:
                     continue
+                else:
+                    open_list[open_list.index(neighbor)] = neighbor
             #else, add it to the open list
-            #! I don't think this overrides the neighbor in the open list if the g value is in fact less 
-            open_list.append(neighbor)
+            else:
+                open_list.append(neighbor)
+        
     return closed_list
 
 # Find defensive locations in each frame
