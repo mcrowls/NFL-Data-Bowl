@@ -154,15 +154,15 @@ def create_window_neighbors(windows):
             for triangle in window.triangle:
                 if triangle in other_window.triangle and other_window.optimal_point[0]<= window.optimal_point[0]:
                     window.neighbors.append(other_window)
-                    other_window.parent = window
+                    #other_window.parent = window
     return windows
 
-def get_heuristic(current_node,neighbor,end):
-    neighbor.g = current_node.g + np.linalg.norm(neighbor.optimal_point - current_node.optimal_point)
-    #neighbor.g = current_node.g + neighbor.optimal_time
+def get_heuristic(current_node,neighbor,end,carrier):
+    neighbor.g = np.linalg.norm(neighbor.optimal_point - current_node.optimal_point)
 
     #h is the distance from the neighbor node to the end, only in the x direction
-    neighbor.h = np.linalg.norm(neighbor.optimal_point[0] - end[0])
+    neighbor.h = np.linalg.norm(neighbor.optimal_point[0] - end[0]) / 7
+    #neighbor.h = np.linalg.norm(neighbor.optimal_point - end)/np.linalg.norm(carrier-end)
     neighbor.f = neighbor.g + neighbor.h
     return neighbor
 
@@ -184,7 +184,6 @@ def get_optimal_path(windows,carrier,end):
             end_window = window
     closed_list = []
     open_list = []
-
 
     #append closest window point from carrier to open with an f score of 0
     open_list.append(start_window)
@@ -211,12 +210,14 @@ def get_optimal_path(windows,carrier,end):
         
         #for all the neighbors for a window, check if they are already in the closed list, if so, do nothing
         for neighbor in current_node.neighbors:
+            if neighbor.parent == None:
+                neighbor.parent = current_node
             if neighbor in closed_list:
                 continue
 
             #if the neighbor is not in the closed list, need to calculate the heuristic
 
-            neighbor = get_heuristic(current_node,neighbor,end)
+            neighbor = get_heuristic(current_node,neighbor,end,carrier)
 
             #if this neighbor is in the open list already, and it's g value in the open list is less than the g value just calculated, do nothing
             #because the neighbor in the open list is better
