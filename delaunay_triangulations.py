@@ -132,6 +132,7 @@ def get_arrival_times(windows,defenders, blockers, frame):
         updated_windows.append(Window(window.points,time,optimal_point,window.triangle))
     return times, updated_windows
 
+#finding the node (window) with the lowest f value, but may need to change depending on whether g and h need to be minimised or maximised
 def find_lowest_f_node(nodes):
     f = float('inf')
     n = None
@@ -163,14 +164,18 @@ def get_optimal_path(windows,carrier,end):
     min_dist_end = float('inf')
     end_window = None
     for window in windows:
+        #the start window is the closest window to the returner
         if np.linalg.norm(carrier-window.optimal_point) < min_dist:
             min_dist = np.linalg.norm(carrier-window.optimal_point)
             start_window = window
+        #the end window is the closest window to the end point
         if np.linalg.norm(end-window.optimal_point) < min_dist_end:
             min_dist_end = np.linalg.norm(end-window.optimal_point)
             end_window = window
     closed_list = []
     open_list = []
+
+
     #append closest window point from carrier to open with an f score of 0
     open_list.append(start_window)
     while len(open_list) > 0:
@@ -178,19 +183,36 @@ def get_optimal_path(windows,carrier,end):
         open_list.remove(current_node)
         closed_list.append(current_node)
 
+        #if the current node is the end node, we're done
         if np.array_equal(current_node.optimal_point,end_window.optimal_point):
             print("Done")
+            for i in closed_list:
+                print(i.optimal_point)
+            #! return the closed list, is this the correct list to return?
             return closed_list
+        
+        #for all the neighbors for a window, check if they are already in the closed list, if so, do nothing
         for neighbor in current_node.neighbors:
             if neighbor in closed_list:
                 continue
+
+            #if the neighbor is not in the closed list, need to calculate the heuristic
+
+            #What heuristic should be used for the windows? Distance or time?
             neighbor.g = current_node.g + np.linalg.norm(neighbor.optimal_point - current_node.optimal_point)
-            neighbor.h = np.linalg.norm(neighbor.optimal_point - end)
+            #neighbor.g = current_node.g + neighbor.optimal_time
+
+            #h is the distance from the neighbor node to the end, only in the x direction
+            neighbor.h = np.linalg.norm(neighbor.optimal_point[0] - end[0])
             neighbor.f = neighbor.g + neighbor.h
 
+            #if this neighbor is in the open list already, and it's g value in the open list is less than the g value just calculated, do nothing
+            #because the neighbor in the open list is better
             if neighbor in open_list:
                 if neighbor.g >= open_list[open_list.index(neighbor)].g:
                     continue
+            #else, add it to the open list
+            #! I don't think this overrides the neighbor in the open list if the g value is in fact less 
             open_list.append(neighbor)
     return closed_list
 

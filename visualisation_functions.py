@@ -195,10 +195,10 @@ def animate_return(csv, delaunay=False):
         # PLOT EVERYTHING
         ax.scatter(np.array(optimal_path_points)[:,0],np.array(optimal_path_points)[:,1],marker="*",c="pink",zorder=17)
         
-        """for window in windows:
+        for window in windows:
             t = str(round(window.optimal_point[0],1))+" "+str(round(window.optimal_point[1],1))
-            #ax.text(window.optimal_point[0]-0.5,window.optimal_point[1]-0.5,t)
-            tt = ""
+            ax.text(window.optimal_point[0]-0.5,window.optimal_point[1]-0.5,t)
+            """tt = ""
             for tri in window.triangle:
                 tt = tt+" "+str(tri)
             ax.text(window.optimal_point[0]+0.1,window.optimal_point[1]+0.1,tt,c="pink")"""
