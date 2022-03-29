@@ -13,6 +13,10 @@ from players import Player
 from window import Window
 
 
+def angle(point1, point2):
+    return abs(np.arctan((point2[1] - point1[1])/(point2[0] - point1[0])))
+
+
 def distance(loc1, loc2):
     return np.sqrt((loc2[0] - loc1[0])**2 + (loc2[1] - loc1[1])**2)
 
@@ -67,7 +71,7 @@ def get_lines_from_delaunay(triangles,defenders,frame):
     #assigning each window their triangle
     for t,w in list(zip(delaunay_triangles,windows)):
         windows[windows.index(w)].triangle = [t]
-        
+
     #finding duplicate windows, where they have the same edges, combining those two windows and removing the other window
     #because some windows can belong to two triangles
     for window in windows:
@@ -92,8 +96,8 @@ def get_lines_from_delaunay(triangles,defenders,frame):
   #   1. Create a straight line between the defender and the target location
   #   2. Find the perpendicular projection of each blocker onto the line from Step 1
   #   3. If this projection does not lie in between the defender and the target, then penalty = 0
-  #      Else use a Gaussian kernel with StdDev = the distance between the defender and the blocker's 
-  #      perpendicular projection and x = the blocker's distance away from the perpendicular projection 
+  #      Else use a Gaussian kernel with StdDev = the distance between the defender and the blocker's
+  #      perpendicular projection and x = the blocker's distance away from the perpendicular projection
   #      to obtain the time penalty for the defender based on the blocker's position (multiplied by the)
   #      max_time_penalty parameter
 def get_arrival_times(windows,defenders, blockers, frame):
@@ -124,7 +128,7 @@ def get_arrival_times(windows,defenders, blockers, frame):
                 #Gaussian kernel uses a weighting term of 5, not sure why, the code used it before with no explanation
                 penalty = 0 if (defender_to_projection >= min_dist or projection_to_target >= min_dist) else 5 * (1 / ((defender_to_projection) * math.sqrt(2*math.pi))) * math.exp(-(1/2) * (blocker_to_projection/(defender_to_projection))**2)
                 total_penalty += penalty
-        
+
             time = min_dist / defender_speed + total_penalty
             times.append(time)
             if time > optimal_time:
@@ -135,13 +139,13 @@ def get_arrival_times(windows,defenders, blockers, frame):
 
 #finding the node (window) with the lowest f value, but may need to change depending on whether g and h need to be minimised or maximised
 def find_lowest_f_node(nodes):
-    f = float('inf')
+    f = -float('inf')
     n = None
     for node in nodes:
-        if node.f < f:
+        if node.f > f:
             f = node.f
             n = node
-    return n 
+    return n
 
 
 def create_window_neighbors(windows):
@@ -157,13 +161,15 @@ def create_window_neighbors(windows):
                     #other_window.parent = window
     return windows
 
-def get_heuristic(current_node,neighbor,end,carrier):
-    neighbor.g = np.linalg.norm(neighbor.optimal_point - current_node.optimal_point)
+def get_heuristic(current_node,neighbor,end):
+    neighbor.g = (np.linalg.norm(neighbor.optimal_point - current_node.optimal_point)/7)/neighbor.optimal_time
+    print(angle(neighbor.optimal_point, current_node.optimal_point)/(2*math.pi))
+    neighbor.g = neighbor.g*angle(neighbor.optimal_point, current_node.optimal_point)
+    #neighbor.g = current_node.g + neighbor.optimal_time
 
     #h is the distance from the neighbor node to the end, only in the x direction
-    neighbor.h = np.linalg.norm(neighbor.optimal_point[0] - end[0]) / 7
-    #neighbor.h = np.linalg.norm(neighbor.optimal_point - end)/np.linalg.norm(carrier-end)
-    neighbor.f = neighbor.g + neighbor.h
+    neighbor.h = np.linalg.norm(neighbor.optimal_point[0] - end[0])
+    neighbor.f = neighbor.g/neighbor.h
     return neighbor
 
 def get_optimal_path(windows,carrier,end):
@@ -199,7 +205,7 @@ def get_optimal_path(windows,carrier,end):
         #if the current node is the end node, we're done
         if np.array_equal(current_node.optimal_point,end_window.optimal_point):
             print("Done")
-            
+
             the_path = []
             while current_node.parent != None:
                 the_path.append(current_node)
@@ -207,7 +213,7 @@ def get_optimal_path(windows,carrier,end):
             the_path.append(start_window)
 
             return the_path
-        
+
         #for all the neighbors for a window, check if they are already in the closed list, if so, do nothing
         for neighbor in current_node.neighbors:
             if neighbor.parent == None:
@@ -229,7 +235,7 @@ def get_optimal_path(windows,carrier,end):
             #else, add it to the open list
             else:
                 open_list.append(neighbor)
-        
+
     return closed_list
 
 # Find defensive locations in each frame
