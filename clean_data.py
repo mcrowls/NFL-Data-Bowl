@@ -21,9 +21,9 @@ from helpers import inputpath, outputpath, useDrive, get_more_specific_df, creat
 # Uncomment if you want to save the processed data elsewhere, but run this on first run
 outpath = inputpath
 
-if useDrive:
-  from google.colab import drive
-  drive.mount('/content/drive')
+# if useDrive:
+#   from google.colab import drive
+#   drive.mount('/content/drive')
   
 """# Cleaning NFL Players Data"""
 def clean_players_data(inputpath_, outputpath_):

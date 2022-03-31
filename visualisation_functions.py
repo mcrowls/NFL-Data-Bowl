@@ -9,6 +9,7 @@ import pandas as pd
 from scipy.spatial import Delaunay, ConvexHull, convex_hull_plot_2d
 from helpers import get_play_description_from_number, inputpath, playpath
 import time
+from side_windows import *
 
 
 
@@ -151,7 +152,9 @@ def animate_return(csv, delaunay=False):
     bound_points_y = []
     outer_layer_x = []
     outer_layer_y = []
-
+    top_windows = []
+    right_windows = []
+    left_windows = []
     start_time = time.time()
     # Get data before for smooth animation
     for frame in range(size): 
@@ -159,14 +162,10 @@ def animate_return(csv, delaunay=False):
         points_off.append(np.array(get_points_of_defenders(attackers, frame)))
         if delaunay:
             bounds = ConvexHull(points_def[frame]).vertices
-            for element in bounds:
-                bound_points_x.append(points_def[frame][element][0])
-                bound_points_y.append(points_def[frame][element][1])
-
-            outer_layer_x.append(bound_points_x)
-            outer_layer_y.append(bound_points_y)
-            bound_points_x = []
-            bound_points_y = []
+            top, right, left = boundary_windows(points_def[frame][bounds], returner_pos[frame][0])
+            top_windows.append(top)
+            right_windows.append(right)
+            left_windows.append(left)
 
         tri = Delaunay(points_def[frame])
         # ! I don't think this line variable is needed anymore
@@ -174,6 +173,8 @@ def animate_return(csv, delaunay=False):
         #lines.append(line)
         arrival_time, windows = get_arrival_times(windows,defenders,attackers,frame)
         times.append(arrival_time)
+
+
         windows = create_window_neighbors(windows)
         optimal_path = get_optimal_path(windows,[returner_pos[frame][0],returner_pos[frame][1]],[10,25])
         optimal_path_points = []
@@ -223,14 +224,18 @@ def animate_return(csv, delaunay=False):
         # triang = ax.triplot(*points_def.T, tri.simplices, color="black")
         if delaunay:
             p = ax.scatter(lines[frame][:, 0], lines[frame][:, 1], c=times[frame], cmap="YlOrRd", marker="s", s=5, zorder=15)
-            out_layer, = ax.plot(outer_layer_x[frame], outer_layer_y[frame], 'o',markersize=4, markerfacecolor="purple", zorder=15)
-
+            for point in top_windows[frame]:
+                ax.plot([point[0], returner_pos[frame][0]], [point[1], point[1]], 'k',zorder=16)
+            for point in left_windows[frame]:
+                ax.plot([point[0], point[0]], [point[1], 53.3], 'k',zorder=16)
+            for point in right_windows[frame]:
+                ax.plot([point[0], point[0]], [point[1], 0 ], 'k',zorder=16)
 
         if frame < size - 1:
             plt.pause(0.20)
             if delaunay:
                 p.remove()
-                out_layer.remove()
+
             return_line.remove()
             offensive.remove()
             defensive.remove()
