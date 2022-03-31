@@ -6,7 +6,7 @@ import os
 input_folderpath = "data"
 output_folderpath = "data"
 play_folderpath = 'play116-game2021010301.csv'
-drive_folderpath = "Colab Notebooks"
+drive_folderpath = "C:\Users\Shane\Desktop\NFL-Data-Bowl"
 useDrive = False
 avg_player_speed = 7
 
