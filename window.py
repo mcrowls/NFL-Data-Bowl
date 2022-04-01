@@ -1,5 +1,5 @@
 class Window:
-    def __init__(self, points, optimal_time,optimal_point,triangle = []):
+    def __init__(self, points, optimal_time,optimal_point,triangle = [],start=[],end=[]):
         self.points = points
         self.optimal_time = optimal_time
         self.optimal_point = optimal_point
@@ -9,3 +9,5 @@ class Window:
         self.h = 0
         self.f = 0
         self.parent = None
+        self.start = start
+        self.end = end

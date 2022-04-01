@@ -1,6 +1,6 @@
 import matplotlib
 from delaunay_triangulations import Player, create_window_neighbors, get_lines_from_sidelines, get_optimal_path, get_points_of_defenders, returner, get_lines_from_delaunay, \
-    get_arrival_times, get_defensive_locations
+    get_arrival_times, get_defensive_locations, create_side_window_neighbors
 matplotlib.use("TkAgg")
 import matplotlib.patches as patches
 from matplotlib import pyplot as plt
@@ -125,7 +125,7 @@ def animate_return(csv, delaunay=False):
     for player in np.unique(csv['displayName']):
         player_csv = csv[csv['displayName'] == player][receive_frame:]
         #size = np.shape(player_csv)[0]
-        size = 10
+        size = 20
         team = csv[csv['displayName'] == player]['team'].iloc[0]
         if team == attacking_team:
             attackers.append(Player(player, player_csv['x'], player_csv['y'], team, 0.6))
@@ -177,6 +177,7 @@ def animate_return(csv, delaunay=False):
 
         #Calculate the optimal path through the windows
         windows = create_window_neighbors(windows)
+        #side_windows = create_side_window_neighbors(windows[len(side_windows)-1:])
         optimal_path = get_optimal_path(windows,[returner_pos[frame][0],returner_pos[frame][1]],[10,25])
         optimal_path_points = []
         for window in optimal_path:
@@ -241,12 +242,12 @@ def animate_return(csv, delaunay=False):
             #The heatmap of the arrival times on all the windows
             p = ax.scatter(lines[frame][:, 0], lines[frame][:, 1], c=times[frame], cmap="YlOrRd", marker="s", s=5, zorder=15)
             #The sideline points
-            for point in top_windows[frame]:
+            """for point in top_windows[frame]:
                 top_points+=ax.plot([point[0], returner_pos[frame][0]], [point[1], point[1]], 'k',zorder=16)
             for point in left_windows[frame]:
                 left_points+=ax.plot([point[0], point[0]], [point[1], 53.3], 'k',zorder=16)
             for point in right_windows[frame]:
-                right_points+=ax.plot([point[0], point[0]], [point[1], 0 ], 'k',zorder=16)
+                right_points+=ax.plot([point[0], point[0]], [point[1], 0 ], 'k',zorder=16)"""
 
         if frame < size - 1:
             plt.pause(0.20)

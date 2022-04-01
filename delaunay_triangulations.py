@@ -67,7 +67,7 @@ def get_lines_from_delaunay(triangles,defenders,frame):
         #21 is arbitrary, but then the head of the list is removed because it's on top of a defender
         line =  np.linspace(pair[0],pair[1],22,endpoint=False)[1:]
         points.append(line)
-        windows.append(Window(line,0,[0,0]))
+        windows.append(Window(line,0,[0,0],start=pair[1],end=pair[0]))
     
     #assigning each window their triangle
     for t,w in list(zip(delaunay_triangles,windows)):
@@ -91,17 +91,17 @@ def get_lines_from_sidelines(top,left,right,returner_pos):
     for t in top:
         line = np.linspace(t,[returner_pos[0],t[1]],22,endpoint=False)[1:]
         points.append(line)
-        windows.append(Window(line,0,[0,0]))
+        windows.append(Window(line,0,[0,0],start=t))
 
     for l in left:
         line = np.linspace(l,[l[0], 53.3],22,endpoint=False)[1:]
         points.append(line)
-        windows.append(Window(line,0,[0,0]))
+        windows.append(Window(line,0,[0,0],start=l))
 
     for r in right:
         line = np.linspace(r,[r[0], 0 ],22,endpoint=False)[1:]
         points.append(line)
-        windows.append(Window(line,0,[0,0]))
+        windows.append(Window(line,0,[0,0],start=r))
 
     points = np.array(points)
     return np.reshape(points,(-1,2)), windows
@@ -149,7 +149,7 @@ def get_arrival_times(windows,side_windows,defenders, blockers, frame):
             if time > optimal_time:
                 optimal_time = time
                 optimal_point = p
-        updated_windows.append(Window(window.points,time,optimal_point,window.triangle))
+        updated_windows.append(Window(window.points,time,optimal_point,window.triangle,window.start,window.end))
     return times, updated_windows
 
 #finding the node (window) with the lowest f value, but may need to change depending on whether g and h need to be minimised or maximised
@@ -170,11 +170,48 @@ def create_window_neighbors(windows):
         for other_window in windows:
             if other_window ==  window:
                 continue
-            for triangle in window.triangle:
-                if triangle in other_window.triangle and other_window.optimal_point[0]<= window.optimal_point[0]:
+
+            #this is to give delaunay windows delaunay neighbors
+            if len(window.triangle) > 0:
+                for triangle in window.triangle:
+                    if triangle in other_window.triangle and other_window.optimal_point[0]<= window.optimal_point[0]:
+                        window.neighbors.append(other_window)
+                
+                #giving delaunay windows sideline neighbors
+                """if len(other_window.triangle) == 0 and len(window.triangle) == 1:
+                    if (np.array_equal(window.start, other_window.start) or np.array_equal(window.end,other_window.start)) and other_window.optimal_point[0]<= window.optimal_point[0]:
+                        window.neighbors.append(other_window)"""
+
+            #this is to give sideline windows any neighbors
+            else:
+                #matching sidelines to delaunay windows
+                if np.array_equal(other_window.start,window.start) and len(other_window.triangle) == 1 and other_window.optimal_point[0]<= window.optimal_point[0]:
                     window.neighbors.append(other_window)
-                    #other_window.parent = window
+                
+                """#matching sideline windows to other sidelines
+                if len(other_window.triangle) == 0 and np.array_equal(other_window.start,window.start) and other_window.optimal_point[0]<= window.optimal_point[0]:
+                    window.neighbors.append(other_window)
+
+                if len(other_window.triangle) == 0 and np.array_equal(other_window.end,window.start) and other_window.optimal_point[0]<= window.optimal_point[0]:
+                    window.neighbors.append(other_window)"""
+
     return windows
+
+def create_side_window_neighbors(side_windows):
+    for window in side_windows:
+        print("window")
+        print(window.optimal_point)
+        print(window.start)
+        for other_window in side_windows:
+            
+            if other_window ==  window:
+                continue
+            print(other_window.optimal_point)
+            print(window.start)
+            print(other_window.start)
+            if np.array_equal(other_window.start,window.start) and len(other_window.triangle) == 1 and other_window.optimal_point[0]<= window.optimal_point[0]:
+                window.neighbors.append(other_window)
+    return side_windows
 
 def get_heuristic(current_node,neighbor,end):
     neighbor.g = (np.linalg.norm(neighbor.optimal_point - current_node.optimal_point)/7)/neighbor.optimal_time
