@@ -68,6 +68,7 @@ def get_lines_from_delaunay(triangles,defenders,frame):
         line =  np.linspace(pair[0],pair[1],22,endpoint=False)[1:]
         points.append(line)
         windows.append(Window(line,0,[0,0]))
+    
     #assigning each window their triangle
     for t,w in list(zip(delaunay_triangles,windows)):
         windows[windows.index(w)].triangle = [t]
@@ -84,6 +85,27 @@ def get_lines_from_delaunay(triangles,defenders,frame):
     points = np.array(points)
     return np.reshape(points,(-1,2)), windows
 
+def get_lines_from_sidelines(top,left,right,returner_pos):
+    points = []
+    windows = []
+    for t in top:
+        line = np.linspace(t,[returner_pos[0],t[1]],22,endpoint=False)[1:]
+        points.append(line)
+        windows.append(Window(line,0,[0,0]))
+
+    for l in left:
+        line = np.linspace(l,[l[0], 53.3],22,endpoint=False)[1:]
+        points.append(line)
+        windows.append(Window(line,0,[0,0]))
+
+    for r in right:
+        line = np.linspace(r,[r[0], 0 ],22,endpoint=False)[1:]
+        points.append(line)
+        windows.append(Window(line,0,[0,0]))
+
+    points = np.array(points)
+    return np.reshape(points,(-1,2)), windows
+
 #calculating the arrival time of each defender to each point in the window, but only keeping the min time
 #These comments came from the competition code, detailing how to calculate the time penalty each blocker imposes on a defender
   #   1. Create a straight line between the defender and the target location
@@ -93,10 +115,10 @@ def get_lines_from_delaunay(triangles,defenders,frame):
   #      perpendicular projection and x = the blocker's distance away from the perpendicular projection
   #      to obtain the time penalty for the defender based on the blocker's position (multiplied by the)
   #      max_time_penalty parameter
-def get_arrival_times(windows,defenders, blockers, frame):
+def get_arrival_times(windows,side_windows,defenders, blockers, frame):
     times = []
     updated_windows = []
-    for window in windows:
+    for window in windows+side_windows:
         optimal_time = float("-inf")
         optimal_point = []
         for p in window.points:
