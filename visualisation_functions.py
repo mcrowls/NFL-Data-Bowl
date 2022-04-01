@@ -125,7 +125,7 @@ def animate_return(csv, delaunay=False):
     for player in np.unique(csv['displayName']):
         player_csv = csv[csv['displayName'] == player][receive_frame:]
         #size = np.shape(player_csv)[0]
-        size = 1
+        size = 15
         team = csv[csv['displayName'] == player]['team'].iloc[0]
         if team == attacking_team:
             attackers.append(Player(player, player_csv['x'], player_csv['y'], team, 0.6))
@@ -155,6 +155,7 @@ def animate_return(csv, delaunay=False):
     top_windows = []
     right_windows = []
     left_windows = []
+    optimal_paths = []
     start_time = time.time()
     # Get data before for smooth animation
     for frame in range(size): 
@@ -167,19 +168,19 @@ def animate_return(csv, delaunay=False):
             right_windows.append(right)
             left_windows.append(left)
 
+        #Get delaunay triangles and arrival times in the windows
         tri = Delaunay(points_def[frame])
-        # ! I don't think this line variable is needed anymore
-        line, windows = get_lines_from_delaunay(tri,defenders,frame)
-        #lines.append(line)
+        _, windows = get_lines_from_delaunay(tri,defenders,frame)
         arrival_time, windows = get_arrival_times(windows,defenders,attackers,frame)
         times.append(arrival_time)
 
-
+        #Calculate the optimal path through the windows
         windows = create_window_neighbors(windows)
         optimal_path = get_optimal_path(windows,[returner_pos[frame][0],returner_pos[frame][1]],[10,25])
         optimal_path_points = []
         for window in optimal_path:
             optimal_path_points.append(window.optimal_point)
+        optimal_paths.append(np.reshape(optimal_path_points,(-1,2)))
         o = []
         l = []
         for w in windows:
@@ -194,21 +195,25 @@ def animate_return(csv, delaunay=False):
     print("Took",round(end_time-start_time,2),"s to process",size,"frames")
     for frame in range(size):
         # PLOT EVERYTHING
-        ax.scatter(np.array(optimal_path_points)[:,0],np.array(optimal_path_points)[:,1],marker="*",c="pink",zorder=17)
+
+        #The points on the optimal path
+        optimal = ax.scatter(optimal_paths[frame][:,0],optimal_paths[frame][:,1],marker="*",c="pink",zorder=17)
+
+        #The lines on the optimal path
+        arrow, = ax.plot(optimal_paths[frame][:,0],optimal_paths[frame][:,1],c="black")
         
-        for window in windows:
+        """for window in windows:
             t = str(round(window.optimal_point[0],1))+" "+str(round(window.optimal_point[1],1))
             ax.text(window.optimal_point[0]-0.5,window.optimal_point[1]-0.5,t)
-            """tt = ""
+            tt = ""
             for tri in window.triangle:
                 tt = tt+" "+str(tri)
             ax.text(window.optimal_point[0]+0.1,window.optimal_point[1]+0.1,tt,c="pink")"""
         
-        for path in optimal_path[:len(optimal_path)-1]:
-            next_point = optimal_path[optimal_path.index(path)+1]
-            ax.arrow(path.optimal_point[0],path.optimal_point[1],next_point.optimal_point[0]-path.optimal_point[0],next_point.optimal_point[1]-path.optimal_point[1])
+        #The returner
         retur = ax.text(returner_pos[frame][0]-0.5, returner_pos[frame][1]-0.5, 'R', zorder=15, c="pink")
 
+        #The y line of the returner
         return_line, = ax.plot([returner_pos[frame][0], returner_pos[frame][0]], [0, 53.3], "--", zorder=5, c="black")
 
         defensive, = ax.plot(points_def[frame][:, 0], points_def[frame][:, 1], 'o', markersize=10, markerfacecolor="r",
@@ -219,22 +224,35 @@ def animate_return(csv, delaunay=False):
                              zorder=5, label='Attackers')
         ball, = ax.plot(balls[frame][0], balls[frame][1], 'o', markersize=8, markerfacecolor="black", markeredgewidth=1, markeredgecolor="white",
                     zorder=10)
+        
+        #The optimal points on each window
         w = ax.scatter(np.array(optimal_points[frame])[:,0],np.array(optimal_points[frame])[:,1],c = "black",marker="x",zorder=16)
 
         # triang = ax.triplot(*points_def.T, tri.simplices, color="black")
         if delaunay:
+            top_points = []
+            left_points = []
+            right_points = []
+            #The heatmap of the arrival times on all the windows
             p = ax.scatter(lines[frame][:, 0], lines[frame][:, 1], c=times[frame], cmap="YlOrRd", marker="s", s=5, zorder=15)
+            #The sideline points
             for point in top_windows[frame]:
-                ax.plot([point[0], returner_pos[frame][0]], [point[1], point[1]], 'k',zorder=16)
+                top_points+=ax.plot([point[0], returner_pos[frame][0]], [point[1], point[1]], 'k',zorder=16)
             for point in left_windows[frame]:
-                ax.plot([point[0], point[0]], [point[1], 53.3], 'k',zorder=16)
+                left_points+=ax.plot([point[0], point[0]], [point[1], 53.3], 'k',zorder=16)
             for point in right_windows[frame]:
-                ax.plot([point[0], point[0]], [point[1], 0 ], 'k',zorder=16)
+                right_points+=ax.plot([point[0], point[0]], [point[1], 0 ], 'k',zorder=16)
 
         if frame < size - 1:
             plt.pause(0.20)
             if delaunay:
                 p.remove()
+                for points in top_points:
+                    points.remove()
+                for points in left_points:
+                    points.remove()
+                for points in right_points:
+                    points.remove()
 
             return_line.remove()
             offensive.remove()
@@ -242,6 +260,8 @@ def animate_return(csv, delaunay=False):
             ball.remove()
             retur.remove()
             w.remove()
+            optimal.remove()
+            arrow.remove()
 
             #triang[0].remove()
             #triang[1].remove()

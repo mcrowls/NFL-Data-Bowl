@@ -75,19 +75,12 @@ def get_lines_from_delaunay(triangles,defenders,frame):
     #finding duplicate windows, where they have the same edges, combining those two windows and removing the other window
     #because some windows can belong to two triangles
     for window in windows:
-        #print("Current window",window.triangle,list(np.sort(window.points,axis=None)))
-        #g = input("")
         for other_window in windows:
-            #print("Other window",other_window.triangle,list(np.sort(other_window.points,axis=None)))
-            #g = input("")
             if other_window == window:
                 continue
-            #if np.array_equal(np.sort(window.points,axis=None),np.sort(other_window.points,axis=None)):
             if np.allclose(np.sort(window.points,axis=None),np.sort(other_window.points,axis=None)):
-                #print("Found duplicate window",other_window.triangle,list(np.sort(other_window.points,axis=None)))
                 window.triangle.append(other_window.triangle[0])
                 windows.remove(other_window)
-    #print("WINDOWS LENGTH",len(windows))
     points = np.array(points)
     return np.reshape(points,(-1,2)), windows
 
@@ -163,7 +156,7 @@ def create_window_neighbors(windows):
 
 def get_heuristic(current_node,neighbor,end):
     neighbor.g = (np.linalg.norm(neighbor.optimal_point - current_node.optimal_point)/7)/neighbor.optimal_time
-    print(angle(neighbor.optimal_point, current_node.optimal_point)/(2*math.pi))
+    #print(angle(neighbor.optimal_point, current_node.optimal_point)/(2*math.pi))
     neighbor.g = neighbor.g*angle(neighbor.optimal_point, current_node.optimal_point)
     #neighbor.g = current_node.g + neighbor.optimal_time
 
@@ -171,6 +164,16 @@ def get_heuristic(current_node,neighbor,end):
     neighbor.h = np.linalg.norm(neighbor.optimal_point[0] - end[0])
     neighbor.f = neighbor.g/neighbor.h
     return neighbor
+
+def reconstruct_path(current_node, end, start_window,carrier):
+    the_path = []
+    the_path.append(Window(None,None,end))
+    while current_node.parent != None:
+        the_path.append(current_node)
+        current_node = current_node.parent
+    the_path.append(start_window)
+    the_path.append(Window(None,None,carrier))
+    return the_path
 
 def get_optimal_path(windows,carrier,end):
     #find the closest windows to the carrier
@@ -197,32 +200,32 @@ def get_optimal_path(windows,carrier,end):
         current_node = find_lowest_f_node(open_list)
         open_list.remove(current_node)
         closed_list.append(current_node)
-        for o in open_list:
-            print(o.optimal_point)
-        for c in closed_list:
-            print(c.optimal_point)
 
         #if the current node is the end node, we're done
         if np.array_equal(current_node.optimal_point,end_window.optimal_point):
             print("Done")
 
-            the_path = []
+            the_path = reconstruct_path(current_node,end,start_window,carrier)
+            return the_path
+            """the_path = []
+            the_path.append(Window(None,None,end))
             while current_node.parent != None:
                 the_path.append(current_node)
                 current_node = current_node.parent
             the_path.append(start_window)
+            the_path.append(Window(None,None,carrier))
 
-            return the_path
+            return the_path"""
 
-        #for all the neighbors for a window, check if they are already in the closed list, if so, do nothing
         for neighbor in current_node.neighbors:
             if neighbor.parent == None:
                 neighbor.parent = current_node
+
+            #for all the neighbors for a window, check if they are already in the closed list, if so, do nothing
             if neighbor in closed_list:
                 continue
 
             #if the neighbor is not in the closed list, need to calculate the heuristic
-
             neighbor = get_heuristic(current_node,neighbor,end)
 
             #if this neighbor is in the open list already, and it's g value in the open list is less than the g value just calculated, do nothing
@@ -236,7 +239,7 @@ def get_optimal_path(windows,carrier,end):
             else:
                 open_list.append(neighbor)
 
-    return closed_list
+    return reconstruct_path(current_node,end,start_window,carrier)
 
 # Find defensive locations in each frame
 # Need to find the team on the ball and the defensive team

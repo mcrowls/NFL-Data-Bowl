@@ -29,9 +29,9 @@ def boundary_windows(hull_points, returner_pos_x):
 
 
     ind_top = sorted(range(len(points_x)), key=lambda i: points_x[i])[-2:]
-    print(points_x)
-    print(np.argpartition(points_x, -1))
-    print(ind_top)
+    #print(points_x)
+    #print(np.argpartition(points_x, -1))
+    #print(ind_top)
     ind_left = np.argmax(points_y)
     ind_right = np.argmin(points_y)
     ind_bottom = np.argpartition(points_x, -1)[0]
