@@ -1,24 +1,30 @@
 import matplotlib
-from delaunay_triangulations import Player, get_points_of_defenders, returner, get_lines_from_delaunay, \
+from delaunay_triangulations import Player, create_window_neighbors, get_optimal_path, get_points_of_defenders, returner, get_lines_from_delaunay, \
     get_arrival_times, get_defensive_locations
 matplotlib.use("TkAgg")
 import matplotlib.patches as patches
 from matplotlib import pyplot as plt
+from matplotlib import animation
 import numpy as np
 import pandas as pd
 from scipy.spatial import Delaunay, ConvexHull, convex_hull_plot_2d
 from helpers import get_play_description_from_number, inputpath, playpath
 import time
+from matplotlib import animation
+from IPython.display import HTML
+import os
+import ipywidgets as widgets
+from IPython.display import display,clear_output
+from ipywidgets import Output, Button
+import functools
 
-
-
-def drawPitch(width, height, color="w"):
+def drawPitch(width, height, color="black"):
     fig = plt.figure()
     ax = plt.axes(xlim=(-10, width + 30), ylim=(-15, height + 5))
     plt.axis('off')
 
     # Grass around pitch
-    rect = patches.Rectangle((-10, -5), width + 40, height + 10, linewidth=1, facecolor='#3f995b', capstyle='round')
+    rect = patches.Rectangle((-10, -5), width + 40, height + 10, linewidth=1, facecolor='#ddede5', capstyle='round')
     ax.add_patch(rect)
     ###################
 
@@ -28,37 +34,37 @@ def drawPitch(width, height, color="w"):
     ###################
     # vertical lines - every 5 yards
     for i in range(21):
-        plt.plot([10 + 5 * i, 10 + 5 * i], [0, height], c="w", lw=2)
+        plt.plot([10 + 5 * i, 10 + 5 * i], [0, height], c="black", lw=2)
     ###################
 
     # distance markers - every 10 yards
     for yards in range(10, width, 10):
         yards_text = yards if yards <= width / 2 else width - yards
         # top markers
-        plt.text(10 + yards - 2, height - 7.5, yards_text, size=20, c="w", weight="bold")
+        plt.text(10 + yards - 2, height - 7.5, yards_text, size=20, c="black")
         # botoom markers
-        plt.text(10 + yards - 2, 7.5, yards_text, size=20, c="w", weight="bold", rotation=180)
+        plt.text(10 + yards - 2, 7.5, yards_text, size=20, c="black", rotation=180)
     ###################
         # yards markers - every yard
         # bottom markers
         for x in range(20):
             for j in range(1, 5):
-                plt.plot([10 + x * 5 + j, 10 + x * 5 + j], [1, 3], color="w", lw=3)
+                plt.plot([10 + x * 5 + j, 10 + x * 5 + j], [1, 3], color="black", lw=3)
 
         # top markers
         for x in range(20):
             for j in range(1, 5):
-                plt.plot([10 + x * 5 + j, 10 + x * 5 + j], [height - 1, height - 3], color="w", lw=3)
+                plt.plot([10 + x * 5 + j, 10 + x * 5 + j], [height - 1, height - 3], color="black", lw=3)
 
         # middle bottom markers
         y = (height - 18.5) / 2
         for x in range(20):
             for j in range(1, 5):
-                plt.plot([10 + x * 5 + j, 10 + x * 5 + j], [y, y + 2], color="w", lw=3)
+                plt.plot([10 + x * 5 + j, 10 + x * 5 + j], [y, y + 2], color="black", lw=3)
     # middle top markers
     for x in range(20):
         for j in range(1, 5):
-            plt.plot([10 + x * 5 + j, 10 + x * 5 + j], [height - y, height - y - 2], color="w", lw=3)
+            plt.plot([10 + x * 5 + j, 10 + x * 5 + j], [height - y, height - y - 2], color="black", lw=3)
     ###################
 
     # draw home end zone
@@ -75,10 +81,10 @@ def drawPitch(width, height, color="w"):
     # draw extra spot point
     # left
     y = (height - 3) / 2
-    plt.plot([10 + 2, 10 + 2], [y, y + 3], c="w", lw=2)
+    plt.plot([10 + 2, 10 + 2], [y, y + 3], c="black", lw=2)
 
     # right
-    plt.plot([width + 10 - 2, width + 10 - 2], [y, y + 3], c="w", lw=2)
+    plt.plot([width + 10 - 2, width + 10 - 2], [y, y + 3], c="black", lw=2)
     ###################
 
     # draw goalpost
@@ -87,10 +93,9 @@ def drawPitch(width, height, color="w"):
     # left
     plt.plot([0, 0], [y, y + goal_width], "-", c="y", lw=10, ms=20)
     # right
-    plt.plot([width + 20, width + 20], [y, y + goal_width], "-", c="y", lw=10, ms=20)
+    plt.plot([width + 20, width + 20], [y, y + goal_width], "-", c="black", lw=10, ms=20)
 
     return fig, ax
-
 
 def extract_one_game(game):
     home = {}
@@ -110,11 +115,8 @@ def extract_one_game(game):
     balls = list(zip(ball_df.x.tolist(), ball_df.y.tolist()))
     return home, away, balls
 
-
-
-
-def animate_return(csv, delaunay=False):
-
+def process_frames(csv, delaunay=False, print_status=False):
+    play_direction = csv["playDirection"].iloc[0]
     receive_frame = csv[csv['event'] == 'punt_received']['frameId'].iloc[0]
     punt_returner = returner(csv, receive_frame)
     attacking_team = csv[csv['displayName'] == punt_returner]['team'].iloc[0]
@@ -123,8 +125,8 @@ def animate_return(csv, delaunay=False):
 
     for player in np.unique(csv['displayName']):
         player_csv = csv[csv['displayName'] == player][receive_frame:]
-        size = np.shape(player_csv)[0]
-        #size = 10
+        #size = np.shape(player_csv)[0]
+        size = 20
         team = csv[csv['displayName'] == player]['team'].iloc[0]
         if team == attacking_team:
             attackers.append(Player(player, player_csv['x'], player_csv['y'], team, 0.6))
@@ -133,84 +135,145 @@ def animate_return(csv, delaunay=False):
 
     returner_pos = csv[csv['displayName'] == punt_returner][receive_frame:]
     returner_pos = list(zip(returner_pos.x.tolist(), returner_pos.y.tolist()))
-
+    
 
     ball_df = csv.sort_values(['frameId'], ascending=True)
     ball_df = ball_df[ball_df.team == "football"][receive_frame:]
     balls = list(zip(ball_df.x.tolist(), ball_df.y.tolist()))
-    fig, ax = drawPitch(100, 53.3)
 
     #DO CALC BEFORE TO SPEED UP VISUALS
     points_def = []
     points_off = []
     lines = []
     times = []
-    bound_points_x =[]
-    bound_points_y = []
+    optimal_points = []
+    optimal_paths = []
     outer_layer_x = []
     outer_layer_y = []
-
+    top_windows = []
+    right_windows = []
+    left_windows = []
+    optimal_paths = []
     start_time = time.time()
     # Get data before for smooth animation
-    for frame in range(size):
+    for frame in range(size): 
         print("Processed frame", frame, "/",size,"||",round((frame/size)*100,3),"%")
         points_def.append(np.array(get_points_of_defenders(defenders, frame)))
         points_off.append(np.array(get_points_of_defenders(attackers, frame)))
         if delaunay:
             bounds = ConvexHull(points_def[frame]).vertices
-            for element in bounds:
-                bound_points_x.append(points_def[frame][element][0])
-                bound_points_y.append(points_def[frame][element][1])
+            top, right, left = boundary_windows(points_def[frame][bounds], returner_pos[frame][0])
+            top_windows.append(top)
+            right_windows.append(right)
+            left_windows.append(left)
 
-            outer_layer_x.append(bound_points_x)
-            outer_layer_y.append(bound_points_y)
-            bound_points_x = []
-            bound_points_y = []
-
+        #Get delaunay triangles and arrival times in the windows
         tri = Delaunay(points_def[frame])
-        lines.append(get_lines_from_delaunay(tri, defenders,frame))
-        times.append(get_arrival_times(lines[frame], defenders, attackers,frame))
-    end_time = time.time()
-    print("Took",round(end_time-start_time,2),"s to process",size,"frames")
+        _, windows = get_lines_from_delaunay(tri,defenders,frame)
+        _,side_windows = get_lines_from_sidelines(top,left,right,returner_pos[frame])
+        arrival_time, windows = get_arrival_times(windows,side_windows,defenders,attackers,frame)
+        times.append(arrival_time)
+
+        #Calculate the optimal path through the windows
+        windows = create_window_neighbors(windows)
+        #side_windows = create_side_window_neighbors(windows[len(side_windows)-1:])
+        optimal_path = get_optimal_path(windows,[returner_pos[frame][0],returner_pos[frame][1]],[10,25])
+        optimal_path_points = []
+        for window in optimal_path:
+            optimal_path_points.append(window.optimal_point)
+        optimal_paths.append(np.reshape(optimal_path_points,(-1,2)))
+        o = []
+        l = []
+        for w in windows:
+            o.append(w.optimal_point)
+            l.append(w.points)
+
+        #for s in side_windows:
+         #   l.append(s.points)
+
+        l = np.array(l)
+        lines.append(np.reshape(l,(-1,2)))
+        optimal_points.append(o)
+        print("Processed frame", frame+1, "/",size,"||",round(((frame+1)/size)*100),"%")
     
+    end_time = time.time()
+    if print_status:
+        print("Took",round(end_time-start_time,2),"s to process",size,"frames")
+    return size, returner_pos, points_def, points_off, balls, lines, times, outer_layer_x, outer_layer_y, optimal_path, optimal_path_points, windows, optimal_points, play_direction
+
+def animate_return(csv, delaunay=False, print_status=False, use_funcanim=False):
+    fig, ax = drawPitch(100, 53.3)
+    anim_values = []
+    size,returner_pos,home,away,balls,lines,times,ox,oy,optimal_path,optimal_path_points,windows,optimal_points,play_direction = process_frames(csv, delaunay, print_status)
+    anim_values.extend([returner_pos, home,away,balls,lines,times,ox,oy])
+
     for frame in range(size):
         # PLOT EVERYTHING
+        ax.scatter(np.array(optimal_path_points)[:,0],np.array(optimal_path_points)[:,1],marker="*",c="pink",zorder=17)
+        
+        for window in windows:
+            t = str(round(window.optimal_point[0],1))+" "+str(round(window.optimal_point[1],1))
+            ax.text(window.optimal_point[0]-0.5,window.optimal_point[1]-0.5,t)
+            """tt = ""
+            for tri in window.triangle:
+                tt = tt+" "+str(tri)
+            ax.text(window.optimal_point[0]+0.1,window.optimal_point[1]+0.1,tt,c="pink")"""
+        
+        for path in optimal_path[:len(optimal_path)-1]:
+            next_point = optimal_path[optimal_path.index(path)+1]
+            ax.arrow(path.optimal_point[0],path.optimal_point[1],next_point.optimal_point[0]-path.optimal_point[0],next_point.optimal_point[1]-path.optimal_point[1])
         retur = ax.text(returner_pos[frame][0]-0.5, returner_pos[frame][1]-0.5, 'R', zorder=15, c="pink")
 
-        return_line, = ax.plot([returner_pos[frame][0], returner_pos[frame][0]], [0, 53.3], "--", zorder=5, c="black")
-
-        defensive, = ax.plot(points_def[frame][:, 0], points_def[frame][:, 1], 'o', markersize=10, markerfacecolor="r",
+        if play_direction=="right":
+            returner_line, = ax.plot([returner_pos[frame][0], returner_pos[frame][0]], [0, 53.3], "--", zorder=5, c="black")
+            returner_path, = ax.plot([returner_pos[frame][0], returner_pos[frame][0]], [0, 53.3], "-", zorder=5, c="gray", linewidth=5)
+            returner_line, = ax.plot([returner_pos[frame][0], returner_pos[frame][0]], [0, 53.3], "--", zorder=5, c="black")
+            returner_pos, = ax.plot([returner_pos[frame][0], returner_pos[frame][0]], [0, 53.3], 'o', markersize=13, markerfacecolor="gray", markeredgewidth=1, markeredgecolor="white", zorder=9)
+            defensive, = ax.plot(home[frame][:, 0], home[frame][:, 1], 'o', markersize=10, markerfacecolor="r",
                              markeredgewidth=1, markeredgecolor="white",
                              zorder=5, label='Defenders')
-        offensive, = ax.plot(points_off[frame][:, 0], points_off[frame][:, 1], 'o', markersize=10, markerfacecolor="b",
-                             markeredgewidth=1, markeredgecolor="white",
-                             zorder=5, label='Attackers')
-        ball, = ax.plot(balls[frame][0], balls[frame][1], 'o', markersize=8, markerfacecolor="black", markeredgewidth=1, markeredgecolor="white",
+            offensive, = ax.plot(away[frame][:, 0], away[frame][:, 1], 'o', markersize=10, markerfacecolor="b",
+                                markeredgewidth=1, markeredgecolor="white",
+                                zorder=5, label='Attackers')
+            ball, = ax.plot(balls[frame][0], balls[frame][1], 'o', markersize=8, markerfacecolor="black", markeredgewidth=1, markeredgecolor="white",
                     zorder=10)
-
-
-
-
+        else:
+            returner_line, = ax.plot([120 - returner_pos[frame][0], 120 - returner_pos[frame][0]], [0, 53.3], "--", zorder=5, c="black")
+            returner_path, = ax.plot([120 - returner_pos[frame][0], 160/3 - returner_pos[frame][0]], [0, 53.3], "-", zorder=5, c="gray", linewidth=5)
+            returner_line, = ax.plot([120 - returner_pos[frame][0], 120 - returner_pos[frame][0]], [0, 53.3], "--", zorder=5, c="black")
+            returner_pos, = ax.plot([120 - returner_pos[frame][0], 120 - returner_pos[frame][0]], 160/3 - [0, 53.3], 'o', markersize=13, markerfacecolor="gray", markeredgewidth=1, markeredgecolor="white", zorder=9)
+            defensive, = ax.plot(120 - home[frame][:, 0], 160/3 - home[frame][:, 1], 'o', markersize=10, markerfacecolor="r",
+                                markeredgewidth=1, markeredgecolor="white",
+                                zorder=5, label='Defenders')
+            offensive, = ax.plot(120 - away[frame][:, 0], 160/3 - away[frame][:, 1], 'o', markersize=10, markerfacecolor="b",
+                                markeredgewidth=1, markeredgecolor="white",
+                                zorder=5, label='Attackers')
+            ball, = ax.plot(120 - balls[frame][0], 160/3 - balls[frame][1], 'o', markersize=8, markerfacecolor="black", markeredgewidth=1, markeredgecolor="white",
+                    zorder=10)
+        w = ax.scatter(np.array(optimal_points[frame])[:,0],np.array(optimal_points[frame])[:,1],c = "black",marker="x",zorder=16)
         # triang = ax.triplot(*points_def.T, tri.simplices, color="black")
         if delaunay:
-            p = ax.scatter(lines[frame][:, 0], lines[frame][:, 1], c=times[frame], cmap="YlOrRd", marker="s", s=5, zorder=15)
-            out_layer, = ax.plot(outer_layer_x[frame], outer_layer_y[frame], 'o',markersize=4, markerfacecolor="purple", zorder=15)
-
-
+            if play_direction=="right":
+                p = ax.scatter(lines[frame][:, 0], lines[frame][:, 1], c=times[frame], cmap="YlOrRd", marker="s", s=5, zorder=15)
+            else:
+                p = ax.scatter(120 - lines[frame][:, 0], 160/3 - lines[frame][:, 1], c=times[frame], cmap="YlOrRd", marker="s", s=5, zorder=15)
+            out_layer, = ax.plot(ox[frame], oy[frame], 'o',markersize=4, markerfacecolor="purple", zorder=15)
         if frame < size - 1:
-            plt.pause(0.05)
+            plt.pause(0.20)
             if delaunay:
                 p.remove()
                 out_layer.remove()
-            return_line.remove()
+            returner_line.remove()
+            returner_path.remove()
+            returner_pos.remove()
             offensive.remove()
             defensive.remove()
             ball.remove()
             retur.remove()
+            w.remove()
 
             #triang[0].remove()
             #triang[1].remove()
-
     plt.show()
 
 def visualise_play(playpath_, changeFigsize=False):
@@ -219,10 +282,7 @@ def visualise_play(playpath_, changeFigsize=False):
     csv = pd.read_csv(playpath_)
     animate_return(csv, delaunay=True)
 
-# Identify the delaunay triangles within the defensive structure
-
 # Draw the delaunay triangles frame by frame
-
 def visualise_delaunay_play(playpath_, size):
     fig, ax = plt.subplots()
     for frame in range(size):
@@ -251,7 +311,112 @@ def visualise_delaunay_play(playpath_, size):
             fig.clear()
     plt.show()
 
+def animate_one_play(home, away, balls, return_line, lines,times, play_direction):
+    fig, ax = drawPitch(100, 53.3)
+    team_left, = ax.plot([], [], 'o', markersize=12, markerfacecolor="r", markeredgewidth=1, markeredgecolor="white", zorder=7)
+    team_right, = ax.plot([], [], 'o', markersize=12, markerfacecolor="b", markeredgewidth=1, markeredgecolor="white", zorder=7)
+    ball, = ax.plot([], [], 'o', markersize=8, markerfacecolor="black", markeredgewidth=1, markeredgecolor="white", zorder=7)
+    returner_line, = ax.plot([],[], "--", zorder=5, c="black")
+    returner_path, = ax.plot([], [], "-", zorder=5, c="gray", linewidth=5)
+    returner_pos, = ax.plot([], [], 'o', markersize=13, markerfacecolor="gray", markeredgewidth=1, markeredgecolor="white", zorder=9)
+    p = ax.scatter(lines[0][:, 0], lines[0][:, 1], c=times[0], cmap="YlOrRd", marker="s", s=5, zorder=5)
+    drawings = [team_left, team_right, ball, returner_line, returner_path, returner_pos, p]
 
+    def init():
+        team_left.set_data([], [])
+        team_right.set_data([], [])
+        ball.set_data([], [])
+        returner_line.set_data([],[])
+        if play_direction == 'left':
+            returner_path.set_data([120 - x[0] for x in return_line], [160/3 -x[1] for x in return_line])
+        else:
+            returner_path.set_data([x[0] for x in return_line], [x[1] for x in return_line])
+        returner_pos.set_data([],[])
 
+        return drawings
+
+    def draw_teams(i):
+        if play_direction == 'left':
+            X = []
+            Y = []
+            for x,y in home[i]:
+                X.append(120-x)
+                Y.append(160/3 - y)
+            team_left.set_data(X, Y)
+
+            X = []
+            Y = []
+            for x,y in away[i]:
+                X.append(120 - x)
+                Y.append(160/3 - y)
+            team_right.set_data(X, Y)
+
+            returner_pos.set_data(120 - return_line[i][0], 160/3 - return_line[i][1])
+        else:
+            X = []
+            Y = []
+            for x,y in home[i]:
+                X.append(x)
+                Y.append(y)
+            team_left.set_data(X, Y)
+
+            X = []
+            Y = []
+            for x,y in away[i]:
+                X.append(x)
+                Y.append(y)
+            team_right.set_data(X, Y)
+
+            returner_pos.set_data(return_line[i][0], return_line[i][1])
+
+    def animate(i):
+        if play_direction == 'left':
+            draw_teams(i)
+
+            x, y = balls[i]
+            ball.set_data([120 - x, 160/3 - y])
+            x, y = return_line[i]
+            returner_line.set_data([[120 - x, 120 - x], [0,53.3]])
+            X = []
+            Y = []
+            for x,y in lines[i]:
+                X.append(120 - x)
+                Y.append(160/3 - y)
+
+            p.set_offsets(np.transpose([X,Y]))
+
+            return drawings
+        else:
+            draw_teams(i)
+
+            x, y = balls[i]
+            ball.set_data([x, y])
+            x, y = return_line[i]
+            returner_line.set_data([[x, x], [0,53.3]])
+            X = []
+            Y = []
+            for x,y in lines[i]:
+                X.append(x)
+                Y.append(y)
+
+            p.set_offsets(np.transpose([X,Y]))
+
+            return drawings
+    # !May take a while!
+    anim = animation.FuncAnimation(fig, animate, init_func=init,
+                                   frames=len(balls), interval=100, blit=False)
+    return HTML(anim.to_html5_video())
+
+def visualise_play_FuncAnimation(play=playpath):
+    anim_values = []
+    if play == playpath:
+        csv = pd.read_csv(playpath)
+    else:
+        csv = pd.read_csv(inputpath+"receiving_plays/"+play)
+    returner_pos,home,away,balls,lines,times,ox,oy, play_direction = process_frames(csv, delaunay=True)
+    anim_values.extend([returner_pos, home,away,balls,lines,times,ox,oy, play_direction])
+    animate_one_play(anim_values[1],anim_values[2],anim_values[3],anim_values[0],anim_values[4],anim_values[5], anim_values[8])
+
+#visualise_play_FuncAnimation(playpath)
 #visualise_delaunay_play(playpath)
 visualise_play(playpath)
