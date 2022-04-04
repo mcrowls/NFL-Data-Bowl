@@ -14,6 +14,11 @@ from window import Window
 
 
 def angle(point1, point2):
+    """print(abs(np.arctan((point2[1] - point1[1])/(point2[0] - point1[0]))))
+    print(point1,point2)
+    print(point2[1] - point1[1])
+    print((point2[0] - point1[0]))
+    print(" ")"""
     return abs(np.arctan((point2[1] - point1[1])/(point2[0] - point1[0])))
 
 
@@ -85,23 +90,24 @@ def get_lines_from_delaunay(triangles,defenders,frame):
     points = np.array(points)
     return np.reshape(points,(-1,2)), windows
 
+#turning the sideline points into window objects
 def get_lines_from_sidelines(top,left,right,returner_pos):
     points = []
     windows = []
     for t in top:
         line = np.linspace(t,[returner_pos[0],t[1]],22,endpoint=False)[1:]
         points.append(line)
-        windows.append(Window(line,0,[0,0],start=t))
+        windows.append(Window(line,0,[0,0],start=t,direction="t"))
 
     for l in left:
         line = np.linspace(l,[l[0], 53.3],22,endpoint=False)[1:]
         points.append(line)
-        windows.append(Window(line,0,[0,0],start=l))
+        windows.append(Window(line,0,[0,0],start=l,direction="l"))
 
     for r in right:
         line = np.linspace(r,[r[0], 0 ],22,endpoint=False)[1:]
         points.append(line)
-        windows.append(Window(line,0,[0,0],start=r))
+        windows.append(Window(line,0,[0,0],start=r,direction="r"))
 
     points = np.array(points)
     return np.reshape(points,(-1,2)), windows
@@ -149,7 +155,7 @@ def get_arrival_times(windows,side_windows,defenders, blockers, frame):
             if time > optimal_time:
                 optimal_time = time
                 optimal_point = p
-        updated_windows.append(Window(window.points,time,optimal_point,window.triangle,window.start,window.end))
+        updated_windows.append(Window(window.points,time,optimal_point,window.triangle,window.start,window.end,window.direction))
     return times, updated_windows
 
 #finding the node (window) with the lowest f value, but may need to change depending on whether g and h need to be minimised or maximised
@@ -165,53 +171,158 @@ def find_lowest_f_node(nodes):
 
 def create_window_neighbors(windows):
     for window in windows:
-        #need to find the other windows in the same triangle as the current window
-        #windows either have 2 or 4 neighbors
         for other_window in windows:
             if other_window ==  window:
                 continue
 
             #this is to give delaunay windows delaunay neighbors
+            #need to find the other windows in the same triangle as the current window
+            #windows either have 2 or 4 neighbors
             if len(window.triangle) > 0:
                 for triangle in window.triangle:
                     if triangle in other_window.triangle and other_window.optimal_point[0]<= window.optimal_point[0]:
                         window.neighbors.append(other_window)
                 
                 #giving delaunay windows sideline neighbors
-                """if len(other_window.triangle) == 0 and len(window.triangle) == 1:
-                    if (np.array_equal(window.start, other_window.start) or np.array_equal(window.end,other_window.start)) and other_window.optimal_point[0]<= window.optimal_point[0]:
-                        window.neighbors.append(other_window)"""
+                #if the delaunay window has the same start point as the sideline window, they should be neighbors
+                #! But this causes problems because it causes some window neighbors to have other windows in between them
+                #! Which is why the check_window_neighbors was created
+                if len(other_window.triangle) == 0 and len(window.triangle) ==  1:
+                    if (np.array_equal(window.start, other_window.start) ) and other_window.optimal_point[0]<= window.optimal_point[0]:
+                        window.neighbors.append(other_window)
 
             #this is to give sideline windows any neighbors
             else:
                 #matching sidelines to delaunay windows
-                if np.array_equal(other_window.start,window.start) and len(other_window.triangle) == 1 and other_window.optimal_point[0]<= window.optimal_point[0]:
+                #if the delaunay window has the same start point as the sideline window, they should be neighbors
+                #! But this causes problems because it causes some window neighbors to have other windows in between them
+                #! Which is why the check_window_neighbors was created
+                if (np.allclose(other_window.start,window.start) or np.array_equal(other_window.end,window.start)) and len(other_window.triangle) == 1 and other_window.optimal_point[0]<= window.optimal_point[0]:
                     window.neighbors.append(other_window)
                 
-                """#matching sideline windows to other sidelines
-                if len(other_window.triangle) == 0 and np.array_equal(other_window.start,window.start) and other_window.optimal_point[0]<= window.optimal_point[0]:
-                    window.neighbors.append(other_window)
+    #Now check for bad neighbors
+    windows = check_window_neighbors(windows)
+    return windows
 
-                if len(other_window.triangle) == 0 and np.array_equal(other_window.end,window.start) and other_window.optimal_point[0]<= window.optimal_point[0]:
-                    window.neighbors.append(other_window)"""
+#order all left windows, the right one should have the left one as a neighbor
+def check_window_neighbors(windows):
+    #this gives sideline windows sideline neighbors
+    tops = []
+    lefts = []
+    rights = []
+    #create lists of all the sideline window types
+    for window in windows:
+        if window.direction == "t":
+            tops.append(window)
+        elif window.direction == "l":
+            lefts.append(window)
+        elif window.direction == "r":
+            rights.append(window)
+    #sort them based on the optimal point
+    tops.sort(key=lambda x: x.optimal_point[1], reverse=True)
+    lefts.sort(key=lambda x: x.optimal_point[0], reverse=True)
+    rights.sort(key=lambda x: x.optimal_point[0], reverse=True)
+
+    #give each sideline window it's adjacent sideline windows as neighbors
+    for top in tops[1:len(tops)-1]:
+        prev = tops[tops.index(top)-1]
+        next = tops[tops.index(top)+1]
+        top.neighbors.append(prev)
+        top.neighbors.append(next)
+
+    tops[0].neighbors.append(tops[1])
+    tops[-1].neighbors.append(tops[-2])
+
+    for left in lefts[1:len(lefts)-1]:
+        prev = lefts[lefts.index(left)-1]
+        next = lefts[lefts.index(left)+1]
+        left.neighbors.append(prev)
+        left.neighbors.append(next)
+
+    lefts[0].neighbors.append(lefts[1])
+    lefts[-1].neighbors.append(lefts[-2])
+
+    for right in rights[1:len(rights)-1]:
+        prev = rights[rights.index(right)-1]
+        next = rights[rights.index(right)+1]
+        right.neighbors.append(prev)
+        right.neighbors.append(next)
+
+    rights[0].neighbors.append(rights[1])
+    rights[-1].neighbors.append(rights[-2])
+
+    #the first top sideline window should be connected to the nearest left sideline window
+    tops[0].neighbors.append(lefts[0])
+    lefts[0].neighbors.append(tops[0])
+
+    #the last top sideline window should be connected to the nearest right sideline window
+    tops[-1].neighbors.append(rights[0])
+    rights[0].neighbors.append(tops[-1])
+
+
+    #This is an attempt to check that if a window has a neighbor, there is no other window between them
+    #It goes through each window's neighbors, checks if there is a window intersecting the line between the window and it's neighbor
+    #If there is an intersection, then remove the neighbor
+    #However, this doesn't work as planned
+    """lines = []
+    #Create a line object for all windows
+    for window in windows:
+        #Sideline windows don't have an end point, so their line's end point is the window's optimal point
+        if window.end != []:
+            lines.append((Line.from_points(window.start,window.end),window))
+        else:
+            lines.append((Line.from_points(window.start,window.optimal_point),window))
+    
+    #for each line's neighbors, check if the line between the line's optimal point and the neighbor's optimal point intersects any window line
+    #will know there's an intersect if the intersect point is more to the right than the neighbor's optimal point, so remove that neighbor
+    for line in lines:
+        #only check outer delaunay windows
+        print("CURRENT LINE",line[0],line[1].optimal_point)
+        for neighbor in line[1].neighbors:
+            #delaunay windows are correctly connected to delaunay windows, don't need to check
+            if len(neighbor.triangle) > 0 and len(line[1].triangle) > 0:
+                continue
+
+            #! some sideline windows have themselves as neighbors?
+            if np.allclose(neighbor.optimal_point,line[1].optimal_point):
+                line[1].neighbors.remove(neighbor)
+                continue
+            
+            #now it should only be checking delaunay to sideline window connections
+            print("current neighbor", neighbor.optimal_point)
+            #create a line between the current window being checked and the current neighbor being checked
+            neighbor_line = Line.from_points(line[1].optimal_point,neighbor.optimal_point)
+            print("line created between line and neighbor",neighbor_line)
+            #now want to check for possible intersections between the neighbor line and any other window
+            for line_2 in lines:
+                #don't check intersection for the current line being checked
+                if line_2 == line:
+                    continue
+                #don't check intersection for current neighbor being checked
+                if line_2[1] == neighbor:
+                    continue
+                #If the line to check for intersection is behind the current line, don't check it
+                #the start and end x values for line_2 (the line to check for potential intersection) should be both greater than the optimal point x to not check line_2
+                if line_2[1].start[0] >= line[1].optimal_point[0] and (line_2[1].end == [] or (line_2[1].end != [] and line_2[1].end[0] >= line[1].optimal_point[0])):
+                    continue
+                print("possible crossing line",line_2[0],line_2[1].optimal_point)
+                intersect_point = line_2[0].intersect_line(neighbor_line)
+                print("They intersect at",intersect_point)
+                #The intersect point should be in the pitch and before the optimal point of the neighbor
+                #!This is probably not a good enough check
+                if intersect_point[0] < 100 and intersect_point[1] > 0 and intersect_point[1] < 54 and intersect_point[0] > neighbor.optimal_point[0]:
+                    print("removed neighbor")
+                    #Remove the neighbor, move onto the next neighbor
+                    line[1].neighbors.remove(neighbor)
+                    break"""
+
+    
 
     return windows
 
-def create_side_window_neighbors(side_windows):
-    for window in side_windows:
-        print("window")
-        print(window.optimal_point)
-        print(window.start)
-        for other_window in side_windows:
-            
-            if other_window ==  window:
-                continue
-            print(other_window.optimal_point)
-            print(window.start)
-            print(other_window.start)
-            if np.array_equal(other_window.start,window.start) and len(other_window.triangle) == 1 and other_window.optimal_point[0]<= window.optimal_point[0]:
-                window.neighbors.append(other_window)
-    return side_windows
+
+
+
 
 def get_heuristic(current_node,neighbor,end):
     neighbor.g = (np.linalg.norm(neighbor.optimal_point - current_node.optimal_point)/7)/neighbor.optimal_time

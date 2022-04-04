@@ -1,6 +1,6 @@
 import matplotlib
 from delaunay_triangulations import Player, create_window_neighbors, get_lines_from_sidelines, get_optimal_path, get_points_of_defenders, returner, get_lines_from_delaunay, \
-    get_arrival_times, get_defensive_locations, create_side_window_neighbors
+    get_arrival_times, get_defensive_locations
 matplotlib.use("TkAgg")
 import matplotlib.patches as patches
 from matplotlib import pyplot as plt
@@ -125,7 +125,7 @@ def animate_return(csv, delaunay=False):
     for player in np.unique(csv['displayName']):
         player_csv = csv[csv['displayName'] == player][receive_frame:]
         #size = np.shape(player_csv)[0]
-        size = 20
+        size = 6
         team = csv[csv['displayName'] == player]['team'].iloc[0]
         if team == attacking_team:
             attackers.append(Player(player, player_csv['x'], player_csv['y'], team, 0.6))
@@ -177,7 +177,6 @@ def animate_return(csv, delaunay=False):
 
         #Calculate the optimal path through the windows
         windows = create_window_neighbors(windows)
-        #side_windows = create_side_window_neighbors(windows[len(side_windows)-1:])
         optimal_path = get_optimal_path(windows,[returner_pos[frame][0],returner_pos[frame][1]],[10,25])
         optimal_path_points = []
         for window in optimal_path:
@@ -206,16 +205,26 @@ def animate_return(csv, delaunay=False):
         optimal = ax.scatter(optimal_paths[frame][:,0],optimal_paths[frame][:,1],marker="*",c="pink",zorder=17)
 
         #The lines on the optimal path
-        arrow, = ax.plot(optimal_paths[frame][:,0],optimal_paths[frame][:,1],c="black")
+        arrow, = ax.plot(optimal_paths[frame][:,0],optimal_paths[frame][:,1],c="black",alpha=0)
         
-        """for window in windows:
+        for window in windows:
+            """THESE ARE DEBUGGING VISUALISTIONS"""
+            #These show the coodinates of optimal points
             t = str(round(window.optimal_point[0],1))+" "+str(round(window.optimal_point[1],1))
             ax.text(window.optimal_point[0]-0.5,window.optimal_point[1]-0.5,t)
-            tt = ""
-            for tri in window.triangle:
-                tt = tt+" "+str(tri)
-            ax.text(window.optimal_point[0]+0.1,window.optimal_point[1]+0.1,tt,c="pink")"""
-        
+            t = str(round(window.start[0],1))+" "+str(round(window.start[1],1))
+            ax.text(window.optimal_point[0]+0.5,window.optimal_point[1],t,c="orange")
+            if len(window.end) >0 :
+                ax.text(window.end[0]+0.5,window.end[1]+0.5,"E")
+            
+            #These draw lines between windows and their neighbors for degugging purposes
+            if window.triangle == []:
+                for n in window.neighbors:
+                    ax.arrow(window.optimal_point[0],window.optimal_point[1],n.optimal_point[0]-window.optimal_point[0],n.optimal_point[1]-window.optimal_point[1],color="blue")
+            else:
+                for n in window.neighbors:
+                    ax.arrow(window.optimal_point[0],window.optimal_point[1],n.optimal_point[0]-window.optimal_point[0],n.optimal_point[1]-window.optimal_point[1],color="orange")
+
         #The returner
         retur = ax.text(returner_pos[frame][0]-0.5, returner_pos[frame][1]-0.5, 'R', zorder=15, c="pink")
 
