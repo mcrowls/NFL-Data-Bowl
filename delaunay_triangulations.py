@@ -1,13 +1,15 @@
 from operator import index
+from re import M
+from turtle import up, update
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+#from pyrsistent import T
 from scipy.spatial import Delaunay
-import skspatial
 from skspatial.objects import Line
 from skspatial.objects import Point
-import statistics
 import math
+import statistics
 from players import Player
 
 class Window:
@@ -288,7 +290,7 @@ def reconstruct_path(current_node, end, start_window,carrier):
         current_node = current_node.parent
     the_path.append(start_window)
     the_path.append(Window(None,None,carrier))
-    return 
+    return the_path
 
 def get_optimal_path(windows,carrier,end):
     #find the closest windows to the carrier
@@ -315,10 +317,10 @@ def get_optimal_path(windows,carrier,end):
         current_node = find_lowest_f_node(open_list)
         open_list.remove(current_node)
         closed_list.append(current_node)
+
         #if the current node is the end node, we're done
         if np.array_equal(current_node.optimal_point,end_window.optimal_point):
             print("Done")
-
             the_path = reconstruct_path(current_node,end,start_window,carrier)
             return the_path
             """the_path = []
@@ -328,6 +330,7 @@ def get_optimal_path(windows,carrier,end):
                 current_node = current_node.parent
             the_path.append(start_window)
             the_path.append(Window(None,None,carrier))
+
             return the_path"""
 
         for neighbor in current_node.neighbors:
@@ -351,7 +354,7 @@ def get_optimal_path(windows,carrier,end):
             #else, add it to the open list
             else:
                 open_list.append(neighbor)
-    return closed_list
+    return reconstruct_path(current_node,end,start_window,carrier)
 
 # Find defensive locations in each frame
 # Need to find the team on the ball and the defensive team

@@ -1,12 +1,16 @@
 import matplotlib
 from delaunay_triangulations import Player, create_window_neighbors, get_optimal_path, get_points_of_defenders, returner, get_lines_from_delaunay, \
-    get_arrival_times, get_defensive_locations
-matplotlib.use("TkAgg")
+    get_arrival_times, get_defensive_locations, boundary_windows, get_lines_from_sidelines
+try:
+    matplotlib.use("TkAgg")
+except:
+    matplotlib.use('WebAgg')
 import matplotlib.patches as patches
 from matplotlib import pyplot as plt
 from matplotlib import animation
 import numpy as np
 import pandas as pd
+import statistics
 from scipy.spatial import Delaunay, ConvexHull, convex_hull_plot_2d
 from helpers import get_play_description_from_number, inputpath, playpath
 import time
@@ -157,7 +161,6 @@ def process_frames(csv, delaunay=False, print_status=False):
     start_time = time.time()
     # Get data before for smooth animation
     for frame in range(size): 
-        print("Processed frame", frame, "/",size,"||",round((frame/size)*100,3),"%")
         points_def.append(np.array(get_points_of_defenders(defenders, frame)))
         points_off.append(np.array(get_points_of_defenders(attackers, frame)))
         if delaunay:
@@ -257,7 +260,8 @@ def animate_return(csv, delaunay=False, print_status=False, use_funcanim=False):
                 p = ax.scatter(lines[frame][:, 0], lines[frame][:, 1], c=times[frame], cmap="YlOrRd", marker="s", s=5, zorder=15)
             else:
                 p = ax.scatter(120 - lines[frame][:, 0], 160/3 - lines[frame][:, 1], c=times[frame], cmap="YlOrRd", marker="s", s=5, zorder=15)
-            out_layer, = ax.plot(ox[frame], oy[frame], 'o',markersize=4, markerfacecolor="purple", zorder=15)
+            if frame > 0:
+                out_layer, = ax.plot(ox[frame], oy[frame], 'o',markersize=4, markerfacecolor="purple", zorder=15)
         if frame < size - 1:
             plt.pause(0.20)
             if delaunay:
