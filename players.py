@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from helpers import inputpath
+from helpers import inputpath, avg_player_speed
 
 
 class Player:
@@ -18,9 +18,12 @@ class Player:
     
     def get_speed(self):
         csv = pd.read_csv(inputpath+'player_speeds.csv')
-        player = csv[csv['Name'] == self.name]
-        speed = player['Speed'][0]
-        return speed
+        try:
+            player = csv[csv['Name'] == self.name]
+            speed = player['Speed'][0]
+            return speed
+        except:
+            speed = avg_player_speed
     
 def get_player_speeds(foldername):
     csv = pd.read_csv(inputpath+'player_speeds.csv')
