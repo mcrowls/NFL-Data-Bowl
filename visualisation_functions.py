@@ -130,7 +130,7 @@ def process_frames(csv, delaunay=False, print_status=False):
     for player in np.unique(csv['displayName']):
         player_csv = csv[csv['displayName'] == player][receive_frame:]
         #size = np.shape(player_csv)[0]
-        size = 2
+        size = 20
         team = csv[csv['displayName'] == player]['team'].iloc[0]
         if team == attacking_team:
             attackers.append(Player(player, player_csv['x'], player_csv['y'], team, 0.6))
@@ -152,8 +152,6 @@ def process_frames(csv, delaunay=False, print_status=False):
     times = []
     optimal_points = []
     optimal_paths = []
-    #outer_layer_x = []
-    #outer_layer_y = []
     top_windows = []
     right_windows = []
     left_windows = []
@@ -202,71 +200,52 @@ def process_frames(csv, delaunay=False, print_status=False):
     end_time = time.time()
     if print_status:
         print("Took",round(end_time-start_time,2),"s to process",size,"frames")
-    return size, returner_pos, points_def, points_off, balls, lines, times, optimal_path, optimal_path_points, windows, optimal_points, play_direction
+    return size, returner_pos, points_def, points_off, balls, lines, times, optimal_paths, optimal_path_points, windows, optimal_points, play_direction
 
 def animate_return(csv, delaunay=False, print_status=False, use_funcanim=False, outpath=visoutputpath, playname=play_folderpath):
     fig, ax = drawPitch(100, 53.3)
     anim_values = []
-    size,returner_pos,home,away,balls,lines,times,optimal_path,optimal_path_points,windows,optimal_points,play_direction = process_frames(csv, delaunay, print_status)
+    size,returner_pos,home,away,balls,lines,times,optimal_paths,optimal_path_points,windows,optimal_points,play_direction = process_frames(csv, delaunay, print_status)
     anim_values.extend([returner_pos, home,away,balls,lines,times])
 
     for frame in range(size):
         # PLOT EVERYTHING
-        ax.scatter(np.array(optimal_path_points)[:,0],np.array(optimal_path_points)[:,1],marker="*",c="pink",zorder=17)
+        optimal = ax.scatter(optimal_paths[frame][:,0],optimal_paths[frame][:,1],marker="*",c="pink",zorder=17)
         
         for window in windows:
-            t = str(round(window.optimal_point[0],1))+" "+str(round(window.optimal_point[1],1))
-            ax.text(window.optimal_point[0]-0.5,window.optimal_point[1]-0.5,t)
+            #t = str(round(window.optimal_point[0],1))+" "+str(round(window.optimal_point[1],1))
+            #ax.text(window.optimal_point[0]-0.5,window.optimal_point[1]-0.5,t)
             """tt = ""
             for tri in window.triangle:
                 tt = tt+" "+str(tri)
             ax.text(window.optimal_point[0]+0.1,window.optimal_point[1]+0.1,tt,c="pink")"""
         
-        for path in optimal_path[:len(optimal_path)-1]:
-            next_point = optimal_path[optimal_path.index(path)+1]
-            ax.arrow(path.optimal_point[0],path.optimal_point[1],next_point.optimal_point[0]-path.optimal_point[0],next_point.optimal_point[1]-path.optimal_point[1])
+        arrow, = ax.plot(optimal_paths[frame][:,0],optimal_paths[frame][:,1],c="black")
         retur = ax.text(returner_pos[frame][0]-0.5, returner_pos[frame][1]-0.5, 'R', zorder=15, c="pink")
 
-        if play_direction=="right":
-            returner_line, = ax.plot([returner_pos[frame][0], returner_pos[frame][0]], [0, 53.3], "--", zorder=5, c="black")
-            returner_path, = ax.plot([returner_pos[frame][0], returner_pos[frame][0]], [0, 53.3], "-", zorder=5, c="gray", linewidth=5)
-            returner_line, = ax.plot([returner_pos[frame][0], returner_pos[frame][0]], [0, 53.3], "--", zorder=5, c="black")
-            returner_pos_, = ax.plot([returner_pos[frame][0], returner_pos[frame][0]], [0, 53.3], 'o', markersize=13, markerfacecolor="gray", markeredgewidth=1, markeredgecolor="white", zorder=9)
-            defensive, = ax.plot(home[frame][:, 0], home[frame][:, 1], 'o', markersize=10, markerfacecolor="r",
-                             markeredgewidth=1, markeredgecolor="white",
-                             zorder=5, label='Defenders')
-            offensive, = ax.plot(away[frame][:, 0], away[frame][:, 1], 'o', markersize=10, markerfacecolor="b",
-                                markeredgewidth=1, markeredgecolor="white",
-                                zorder=5, label='Attackers')
-            ball, = ax.plot(balls[frame][0], balls[frame][1], 'o', markersize=8, markerfacecolor="black", markeredgewidth=1, markeredgecolor="white",
-                    zorder=10)
-        else:
-            returner_line, = ax.plot([120 - returner_pos[frame][0], 120 - returner_pos[frame][0]], [0, 53.3], "--", zorder=5, c="black")
-            returner_path, = ax.plot([120 - returner_pos[frame][0], 160/3 - returner_pos[frame][0]], [0, 53.3], "-", zorder=5, c="gray", linewidth=5)
-            returner_line, = ax.plot([120 - returner_pos[frame][0], 120 - returner_pos[frame][0]], [0, 53.3], "--", zorder=5, c="black")
-            returner_pos_, = ax.plot([120 - returner_pos[frame][0], 120 - returner_pos[frame][0]], 160/3 - [0, 53.3], 'o', markersize=13, markerfacecolor="gray", markeredgewidth=1, markeredgecolor="white", zorder=9)
-            defensive, = ax.plot(120 - home[frame][:, 0], 160/3 - home[frame][:, 1], 'o', markersize=10, markerfacecolor="r",
-                                markeredgewidth=1, markeredgecolor="white",
-                                zorder=5, label='Defenders')
-            offensive, = ax.plot(120 - away[frame][:, 0], 160/3 - away[frame][:, 1], 'o', markersize=10, markerfacecolor="b",
-                                markeredgewidth=1, markeredgecolor="white",
-                                zorder=5, label='Attackers')
-            ball, = ax.plot(120 - balls[frame][0], 160/3 - balls[frame][1], 'o', markersize=8, markerfacecolor="black", markeredgewidth=1, markeredgecolor="white",
-                    zorder=10)
+        
+        returner_line, = ax.plot([returner_pos[frame][0], returner_pos[frame][0]], [0, 53.3], "--", zorder=5, c="black")
+        returner_path, = ax.plot([returner_pos[frame][0], returner_pos[frame][0]], [0, 53.3], "-", zorder=5, c="gray", linewidth=5)
+        returner_pos_, = ax.plot([returner_pos[frame][0], returner_pos[frame][0]], [0, 53.3], 'o', markersize=13, markerfacecolor="gray", markeredgewidth=1, markeredgecolor="white", zorder=9)
+        defensive, = ax.plot(home[frame][:, 0], home[frame][:, 1], 'o', markersize=10, markerfacecolor="r",
+                            markeredgewidth=1, markeredgecolor="white",
+                            zorder=5, label='Defenders')
+        offensive, = ax.plot(away[frame][:, 0], away[frame][:, 1], 'o', markersize=10, markerfacecolor="b",
+                            markeredgewidth=1, markeredgecolor="white",
+                            zorder=5, label='Attackers')
+        ball, = ax.plot(balls[frame][0], balls[frame][1], 'o', markersize=8, markerfacecolor="black", markeredgewidth=1, markeredgecolor="white",
+                zorder=10)
+
         w = ax.scatter(np.array(optimal_points[frame])[:,0],np.array(optimal_points[frame])[:,1],c = "black",marker="x",zorder=16)
-        # triang = ax.triplot(*points_def.T, tri.simplices, color="black")
         if delaunay:
-            if play_direction=="right":
-                p = ax.scatter(lines[frame][:, 0], lines[frame][:, 1], c=times[frame], cmap="YlOrRd", marker="s", s=5, zorder=15)
-            else:
-                p = ax.scatter(120 - lines[frame][:, 0], 160/3 - lines[frame][:, 1], c=times[frame], cmap="YlOrRd", marker="s", s=5, zorder=15)
-            #if frame > 0:
-                #out_layer, = ax.plot(ox[frame], oy[frame], 'o',markersize=4, markerfacecolor="purple", zorder=15)
+            p = ax.scatter(lines[frame][:, 0], lines[frame][:, 1], c=times[frame], cmap="YlOrRd", marker="s", s=5, zorder=15)
+            
+        
+        plt.savefig(f"visualisations/{playname}_frame{frame}.png", format="png")
         if frame < size - 1:
             plt.pause(0.20)
             if delaunay:
                 p.remove()
-                #out_layer.remove()
             returner_line.remove()
             returner_path.remove()
             returner_pos_.remove()
@@ -275,10 +254,12 @@ def animate_return(csv, delaunay=False, print_status=False, use_funcanim=False, 
             ball.remove()
             retur.remove()
             w.remove()
+            arrow.remove()
+            optimal.remove()
 
             #triang[0].remove()
             #triang[1].remove()
-        plt.savefig(f"visualisations/{playname}_frame{frame}.png", format="png")
+        
     plt.show()
 
 def visualise_play(playpath_, changeFigsize=False, outpath=visoutputpath, playname=play_folderpath):
