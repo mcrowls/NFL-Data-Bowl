@@ -12,6 +12,8 @@ import math
 from helpers import avg_player_speed
 import statistics
 from players import Player
+from frechetdist import frdist
+
 
 class Window:
     def __init__(self, points, optimal_time,optimal_point,triangle = [],start=[],end=[]):
@@ -30,7 +32,7 @@ class Window:
 
 def finding_five_yard(array):
     starting_point = array[0]
-    relevant_points = []
+    relevant_points = [array[0]]
     i = 1
     truth = False
     while truth == False:
@@ -48,17 +50,36 @@ def find_five_point(array):
     point2 = array[-1]
     gradient = (point2[1] - point1[1])/(point2[0] - point1[0])
     intercept = point2[1] - gradient*point2[0]
-    return [array[0][0] + 5, gradient*(array[0][0] + 5) + intercept]
+    return [array[0][0] - 5, gradient*(array[0][0] - 5) + intercept]
+
+
+def path_interpolate(array, n):
+    distances_array = []
+    for i in range(np.shape(array)[0] - 1):
+        distances_array.append(np.sqrt((array[i][0] - array[i+1][0])**2 + (array[i][1] - array[i+1][1])**2))
+    ratios = []
+    for distance in distances_array:
+        ratios.append(round(distance/np.sum(distances_array)*n))
+    points = []
+    for i in range(np.size(ratios)):
+        segment = np.linspace(array[i], array[i+1], ratios[i])
+        for element in segment:
+            points.append(element)
+    return points
 
 
 def frechet_distance(actual_path, predicted_path):
     # cut off both of these after 5 yards moved in the x direction
+    new_predicted_path = []
+    for j in reversed(predicted_path):
+        new_predicted_path.append(j)
     actual_path = finding_five_yard(actual_path)
-    predicted_path = finding_five_yard(predicted_path)
-    actual_path[-1] = find_five_point(actual_path[-2], actual_path[-1])
-    predicted_path[-1] = find_five_point(predicted_path[-2], predicted_path[-1])
-    print(actual_path, predicted_path)
-    return deviation
+    predicted_path = finding_five_yard(new_predicted_path)
+    actual_path[-1] = find_five_point(actual_path)
+    predicted_path[-1] = find_five_point(predicted_path)
+    actual_path = path_interpolate(actual_path, 50)
+    predicted_path = path_interpolate(predicted_path, 50)
+    return frdist(actual_path, predicted_path)
 
 
 def distance(loc1, loc2):
