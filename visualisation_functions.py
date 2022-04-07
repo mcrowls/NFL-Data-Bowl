@@ -1,6 +1,6 @@
 import matplotlib
 from delaunay_triangulations import Player, create_window_neighbors, get_optimal_path, get_points_of_defenders, returner, get_lines_from_delaunay, \
-    get_arrival_times, get_defensive_locations, boundary_windows, get_lines_from_sidelines
+    get_arrival_times, get_defensive_locations, boundary_windows, get_lines_from_sidelines, frechet_distance
 try:
     matplotlib.use("TkAgg")
 except:
@@ -139,7 +139,7 @@ def process_frames(csv, delaunay=False, print_status=False):
 
     returner_pos = csv[csv['displayName'] == punt_returner][receive_frame:]
     returner_pos = list(zip(returner_pos.x.tolist(), returner_pos.y.tolist()))
-    
+
 
     ball_df = csv.sort_values(['frameId'], ascending=True)
     ball_df = ball_df[ball_df.team == "football"][receive_frame:]
@@ -160,7 +160,7 @@ def process_frames(csv, delaunay=False, print_status=False):
     optimal_paths = []
     start_time = time.time()
     # Get data before for smooth animation
-    for frame in range(size): 
+    for frame in range(size):
         points_def.append(np.array(get_points_of_defenders(defenders, frame)))
         points_off.append(np.array(get_points_of_defenders(attackers, frame)))
         if delaunay:
@@ -198,7 +198,7 @@ def process_frames(csv, delaunay=False, print_status=False):
         lines.append(np.reshape(l,(-1,2)))
         optimal_points.append(o)
         print("Processed frame", frame+1, "/",size,"||",round(((frame+1)/size)*100),"%")
-    
+
     end_time = time.time()
     if print_status:
         print("Took",round(end_time-start_time,2),"s to process",size,"frames")
@@ -213,7 +213,7 @@ def animate_return(csv, delaunay=False, print_status=False, use_funcanim=False, 
     for frame in range(size):
         # PLOT EVERYTHING
         ax.scatter(np.array(optimal_path_points)[:,0],np.array(optimal_path_points)[:,1],marker="*",c="pink",zorder=17)
-        
+
         for window in windows:
             t = str(round(window.optimal_point[0],1))+" "+str(round(window.optimal_point[1],1))
             ax.text(window.optimal_point[0]-0.5,window.optimal_point[1]-0.5,t)
@@ -221,7 +221,7 @@ def animate_return(csv, delaunay=False, print_status=False, use_funcanim=False, 
             for tri in window.triangle:
                 tt = tt+" "+str(tri)
             ax.text(window.optimal_point[0]+0.1,window.optimal_point[1]+0.1,tt,c="pink")"""
-        
+
         for path in optimal_path[:len(optimal_path)-1]:
             next_point = optimal_path[optimal_path.index(path)+1]
             ax.arrow(path.optimal_point[0],path.optimal_point[1],next_point.optimal_point[0]-path.optimal_point[0],next_point.optimal_point[1]-path.optimal_point[1])
@@ -299,7 +299,7 @@ def visualise_delaunay_play(playpath_, outpath=visoutputpath, playname=play_fold
         tri = Delaunay(points_def)
         lines = get_lines_from_delaunay(tri,points_def)
         times = get_arrival_times(lines,points_def,points_off)
-        
+
         plt.triplot(points_def[:,0], points_def[:,1], tri.simplices)
         plt.plot(points_def[:,0], points_def[:,1], 'o', c='r',label='Defenders')
         plt.plot(points_off[:,0], points_off[:,1], 'o', c='b', label='Attackers')
@@ -412,8 +412,8 @@ def animate_one_play(home, away, balls, return_line, lines,times, play_direction
     # !May take a while!
     anim = animation.FuncAnimation(fig, animate, init_func=init,
                                    frames=len(balls), interval=100, blit=False)
-    
-    writergif = animation.PillowWriter(fps=30) 
+
+    writergif = animation.PillowWriter(fps=30)
     anim.save(outpath+playname[:-4]+".gif", writer=writergif)
     return HTML(anim.to_html5_video())
 

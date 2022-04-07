@@ -27,6 +27,40 @@ class Window:
         self.start = start
         self.end = end
 
+
+def finding_five_yard(array):
+    starting_point = array[0]
+    relevant_points = []
+    i = 1
+    truth = False
+    while truth == False:
+        if abs(array[i][0] - starting_point[0]) < 5:
+            relevant_points.append(array[i])
+        else:
+            relevant_points.append(array[i])
+            truth = True
+        i += 1
+    return relevant_points
+
+
+def find_five_point(array):
+    point1 = array[-2]
+    point2 = array[-1]
+    gradient = (point2[1] - point1[1])/(point2[0] - point1[0])
+    intercept = point2[1] - gradient*point2[0]
+    return [array[0][0] + 5, gradient*(array[0][0] + 5) + intercept]
+
+
+def frechet_distance(actual_path, predicted_path):
+    # cut off both of these after 5 yards moved in the x direction
+    actual_path = finding_five_yard(actual_path)
+    predicted_path = finding_five_yard(predicted_path)
+    actual_path[-1] = find_five_point(actual_path[-2], actual_path[-1])
+    predicted_path[-1] = find_five_point(predicted_path[-2], predicted_path[-1])
+    print(actual_path, predicted_path)
+    return deviation
+
+
 def distance(loc1, loc2):
     return np.sqrt((loc2[0] - loc1[0])**2 + (loc2[1] - loc1[1])**2)
 
@@ -78,7 +112,7 @@ def get_lines_from_delaunay(triangles,defenders,frame):
         line =  np.linspace(pair[0],pair[1],22,endpoint=False)[1:]
         points.append(line)
         windows.append(Window(line,0,[0,0],start=pair[1],end=pair[0]))
-    
+
     #assigning each window their triangle
     for t,w in list(zip(delaunay_triangles,windows)):
         windows[windows.index(w)].triangle = [t]
@@ -185,7 +219,7 @@ def create_window_neighbors(windows):
                 for triangle in window.triangle:
                     if triangle in other_window.triangle and other_window.optimal_point[0]<= window.optimal_point[0]:
                         window.neighbors.append(other_window)
-                
+
                 #giving delaunay windows sideline neighbors
                 """if len(other_window.triangle) == 0 and len(window.triangle) == 1:
                     if (np.array_equal(window.start, other_window.start) or np.array_equal(window.end,other_window.start)) and other_window.optimal_point[0]<= window.optimal_point[0]:
@@ -196,7 +230,7 @@ def create_window_neighbors(windows):
                 #matching sidelines to delaunay windows
                 if np.array_equal(other_window.start,window.start) and len(other_window.triangle) == 1 and other_window.optimal_point[0]<= window.optimal_point[0]:
                     window.neighbors.append(other_window)
-                
+
                 """#matching sideline windows to other sidelines
                 if len(other_window.triangle) == 0 and np.array_equal(other_window.start,window.start) and other_window.optimal_point[0]<= window.optimal_point[0]:
                     window.neighbors.append(other_window)
@@ -264,7 +298,7 @@ def create_side_window_neighbors(side_windows):
         print(window.optimal_point)
         print(window.start)
         for other_window in side_windows:
-            
+
             if other_window ==  window:
                 continue
             print(other_window.optimal_point)
