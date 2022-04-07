@@ -45,8 +45,8 @@ def clean_players_data(inputpath_, outputpath_):
   cleaned_players = pd.read_csv(outputpath_+"players.csv")
   return cleaned_players
 
-print("*** Cleaning Data [0/4] ***")
-print("* Cleaning 'players.csv' [1/4] *")
+print("*** Cleaning Data [0/5] ***")
+print("* Cleaning 'players.csv' [1/5] *")
 clean_players_data(inputpath, outpath)
 
 """# Cleaning NFL Plays Data"""
@@ -66,7 +66,7 @@ def clean_plays_data(inputpath_, outputpath_):
   fieldGoal.to_csv(outputpath_+"fieldGoal.csv",index=False)
   extraPoint.to_csv(outputpath_+"extraPoint.csv",index=False)
 
-print("* Cleaning 'plays.csv' [2/4] *")
+print("* Cleaning 'plays.csv' [2/5] *")
 clean_plays_data(inputpath, outpath)
 
 """# Cleaning NFL Tracking Data for Player locations on Punts"""
@@ -89,7 +89,7 @@ def clean_tracking_data(inputpath_, outputpath_, foldername):
               if 'punt_received' in np.unique(new_df['event']):
                   new_df.to_csv(outputpath_+foldername+'/play' + str(id) + '-game' + str(game) + '.csv')
                   
-print("* Cleaning Tracking Data [3/4] *")
+print("* Cleaning Tracking Data [3/5] *")
 clean_tracking_data(inputpath, outpath, "receiving_plays")
 
 """# Cleaning Madden 2022 Data for Player Speeds"""
@@ -123,6 +123,26 @@ def clean_madden_data(inputpath_, outputpath_):
   df.to_csv(outputpath_+'player_speeds.csv')
   return df
   
-print("* Cleaning 'madden_21_ratings.csv' [4/4] *")
+print("* Cleaning 'madden_21_ratings.csv' [4/5] *")
 clean_madden_data(inputpath, outpath)
+
+
+def clean_play_directions(inputpath_):
+      receiving_plays_path = inputpath_+"receiving_plays"
+      print(receiving_plays_path)
+      for play_file in os.listdir(receiving_plays_path):
+            print(play_file)
+            
+            play_csv = pd.read_csv(receiving_plays_path+"/"+play_file)
+            play_direction = play_csv["playDirection"].iloc[0]
+            if play_direction == "left":
+                print("left")
+                play_csv["x"] = 120-play_csv["x"]
+                play_csv["y"] = 160/3 - play_csv["y"]
+                play_csv.to_csv(receiving_plays_path+"/"+play_file)
+                #break
+                  
+
+print("* Cleaning player directions [5/5] *")
+clean_play_directions(inputpath)   
 print("*** Done - all Data cleaned ***")
