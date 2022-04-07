@@ -1,6 +1,7 @@
 import matplotlib
 from delaunay_triangulations import Player, create_window_neighbors, get_optimal_path, get_points_of_defenders, returner, get_lines_from_delaunay, \
     get_arrival_times, get_defensive_locations, boundary_windows, get_lines_from_sidelines
+from players import get_player_speed
 try:
     matplotlib.use("TkAgg")
 except:
@@ -139,7 +140,7 @@ def process_frames(csv, delaunay=False, print_status=False):
 
     returner_pos = csv[csv['displayName'] == punt_returner][receive_frame:]
     returner_pos = list(zip(returner_pos.x.tolist(), returner_pos.y.tolist()))
-    
+    returner_speed = get_player_speed(punt_returner)
 
     ball_df = csv.sort_values(['frameId'], ascending=True)
     ball_df = ball_df[ball_df.team == "football"][receive_frame:]
@@ -180,7 +181,7 @@ def process_frames(csv, delaunay=False, print_status=False):
         #Calculate the optimal path through the windows
         windows = create_window_neighbors(windows)
         #side_windows = create_side_window_neighbors(windows[len(side_windows)-1:])
-        optimal_path = get_optimal_path(windows,[returner_pos[frame][0],returner_pos[frame][1]],[10,25])
+        optimal_path = get_optimal_path(windows,[returner_pos[frame][0],returner_pos[frame][1]],[10,25], returner_speed)
         optimal_path_points = []
         for window in optimal_path:
             optimal_path_points.append(window.optimal_point)

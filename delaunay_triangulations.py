@@ -274,8 +274,8 @@ def create_side_window_neighbors(side_windows):
                 window.neighbors.append(other_window)
     return side_windows
 
-def get_heuristic(current_node,neighbor,end):
-    neighbor.g = (np.linalg.norm(neighbor.optimal_point - current_node.optimal_point)/avg_player_speed)/neighbor.optimal_time
+def get_heuristic(current_node,neighbor,end,return_speed):
+    neighbor.g = (np.linalg.norm(neighbor.optimal_point - current_node.optimal_point)/return_speed)/neighbor.optimal_time
     #print(angle(neighbor.optimal_point, current_node.optimal_point)/(2*math.pi))
     neighbor.g = neighbor.g*angle(neighbor.optimal_point, current_node.optimal_point)
     #neighbor.g = current_node.g + neighbor.optimal_time
@@ -295,7 +295,7 @@ def reconstruct_path(current_node, end, start_window,carrier):
     the_path.append(Window(None,None,carrier))
     return the_path
 
-def get_optimal_path(windows,carrier,end):
+def get_optimal_path(windows,carrier,end,return_speed):
     #find the closest windows to the carrier
     min_dist = float('inf')
     start_window = None
@@ -345,7 +345,7 @@ def get_optimal_path(windows,carrier,end):
                 continue
 
             #if the neighbor is not in the closed list, need to calculate the heuristic
-            neighbor = get_heuristic(current_node,neighbor,end)
+            neighbor = get_heuristic(current_node,neighbor,end,return_speed)
 
             #if this neighbor is in the open list already, and it's g value in the open list is less than the g value just calculated, do nothing
             #because the neighbor in the open list is better
