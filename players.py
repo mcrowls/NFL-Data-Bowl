@@ -24,6 +24,7 @@ class Player:
             return speed
         except:
             speed = avg_player_speed
+            return speed
     
 def get_player_speeds(foldername):
     csv = pd.read_csv(inputpath+'player_speeds.csv')
