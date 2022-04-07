@@ -9,6 +9,7 @@ from scipy.spatial import Delaunay
 from skspatial.objects import Line
 from skspatial.objects import Point
 import math
+from helpers import avg_player_speed
 import statistics
 from players import Player
 
@@ -227,6 +228,8 @@ def boundary_windows(hull_points, returner_pos_x):
 
     points_x = [item[0] for item in points_after_returner]
     points_y = [item[1] for item in points_after_returner]
+    if len(points_after_returner) == 0:
+        return [], [], []
 
 
     ind_top = sorted(range(len(points_x)), key=lambda i: points_x[i])[-2:]
@@ -272,7 +275,7 @@ def create_side_window_neighbors(side_windows):
     return side_windows
 
 def get_heuristic(current_node,neighbor,end):
-    neighbor.g = (np.linalg.norm(neighbor.optimal_point - current_node.optimal_point)/7)/neighbor.optimal_time
+    neighbor.g = (np.linalg.norm(neighbor.optimal_point - current_node.optimal_point)/avg_player_speed)/neighbor.optimal_time
     #print(angle(neighbor.optimal_point, current_node.optimal_point)/(2*math.pi))
     neighbor.g = neighbor.g*angle(neighbor.optimal_point, current_node.optimal_point)
     #neighbor.g = current_node.g + neighbor.optimal_time
