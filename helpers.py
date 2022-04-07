@@ -6,6 +6,7 @@ import os
 input_folderpath = "data"
 output_folderpath = "data"
 play_folderpath = 'play4153-game2020100800.csv'
+vis_output_folderpath = "visualisations"
 drive_folderpath = "Colab Notebooks"
 useDrive = False
 avg_player_speed = 7
@@ -16,6 +17,7 @@ avg_player_speed = 7
 drivepath = 'drive/MyDrive/'+drive_folderpath+"/"
 inputpath = drivepath+input_folderpath+"/" if useDrive else input_folderpath+"/"
 outputpath = drivepath+output_folderpath+"/" if useDrive else output_folderpath+"/"
+visoutputpath = drivepath+vis_output_folderpath+"/" if useDrive else vis_output_folderpath+"/"
 playpath = inputpath+"receiving_plays/"+play_folderpath
 #drivepath = 'drive\\MyDrive\\'+drive_folderpath+"\\"
 #inputpath = drivepath+input_folderpath+"\\" if useDrive else input_folderpath+"\\"
