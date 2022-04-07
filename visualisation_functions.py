@@ -125,7 +125,7 @@ def animate_return(csv, delaunay=False):
     for player in np.unique(csv['displayName']):
         player_csv = csv[csv['displayName'] == player][receive_frame:]
         #size = np.shape(player_csv)[0]
-        size = 6
+        size = 1
         team = csv[csv['displayName'] == player]['team'].iloc[0]
         if team == attacking_team:
             attackers.append(Player(player, player_csv['x'], player_csv['y'], team, 0.6))
@@ -210,12 +210,12 @@ def animate_return(csv, delaunay=False):
         for window in windows:
             """THESE ARE DEBUGGING VISUALISTIONS"""
             #These show the coodinates of optimal points
-            t = str(round(window.optimal_point[0],1))+" "+str(round(window.optimal_point[1],1))
-            ax.text(window.optimal_point[0]-0.5,window.optimal_point[1]-0.5,t)
-            t = str(round(window.start[0],1))+" "+str(round(window.start[1],1))
-            ax.text(window.optimal_point[0]+0.5,window.optimal_point[1],t,c="orange")
-            if len(window.end) >0 :
-                ax.text(window.end[0]+0.5,window.end[1]+0.5,"E")
+            #t = str(round(window.optimal_point[0],1))+" "+str(round(window.optimal_point[1],1))
+            #ax.text(window.optimal_point[0]-0.5,window.optimal_point[1]-0.5,t)
+            #t = str(round(window.start[0],1))+" "+str(round(window.start[1],1))
+            #ax.text(window.optimal_point[0]+0.5,window.optimal_point[1],t,c="orange")
+            #if len(window.end) >0 :
+                #ax.text(window.end[0]+0.5,window.end[1]+0.5,"E")
             
             #These draw lines between windows and their neighbors for degugging purposes
             if window.triangle == []:
