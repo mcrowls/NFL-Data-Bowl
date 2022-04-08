@@ -5,7 +5,7 @@ from players import get_player_speed
 try:
     matplotlib.use("TkAgg")
 except:
-    matplotlib.use('WebAgg')
+    matplotlib.use('Qt5Agg')#WebAgg
 import matplotlib.patches as patches
 from matplotlib import pyplot as plt
 from matplotlib import animation
@@ -432,4 +432,4 @@ def visualise_play_FuncAnimation(play=playpath, outpath=visoutputpath, playname=
 
 #OLD visualise_delaunay_play(playpath)
 #visualise_play_FuncAnimation(playpath)
-visualise_play(playpath)
+visualise_play(playpath, changeFigsize=True)
