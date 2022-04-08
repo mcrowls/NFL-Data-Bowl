@@ -279,7 +279,7 @@ def animate_return(csv, delaunay=False, print_status=False, use_funcanim=False, 
 
             #triang[0].remove()
             #triang[1].remove()
-        plt.savefig(f"visualisations/{playname}_frame{frame}.png", format="png")
+    plt.savefig(f"visualisations/{playname[:len(playname) - 4]}.png", format="png")
     plt.show()
 
 def visualise_play(playpath_, changeFigsize=False, outpath=visoutputpath, playname=play_folderpath):
@@ -312,7 +312,7 @@ def visualise_delaunay_play(playpath_, outpath=visoutputpath, playname=play_fold
         plt.ylim([0, 53.3])
         plt.xlabel('x')
         plt.ylabel('y')
-        plt.savefig(f"visualisations/{playname}_frame{frame}.png", format="png")
+        plt.savefig(f"visualisations/{playname[:len(playname) - 4]}_frame{frame}.png", format="png")
         if frame < size-1:
             plt.pause(0.05)
             ax.clear()
