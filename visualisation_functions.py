@@ -125,7 +125,7 @@ def animate_return(csv, delaunay=False):
     for player in np.unique(csv['displayName']):
         player_csv = csv[csv['displayName'] == player][receive_frame:]
         #size = np.shape(player_csv)[0]
-        size = 1
+        size = 9
         team = csv[csv['displayName'] == player]['team'].iloc[0]
         if team == attacking_team:
             attackers.append(Player(player, player_csv['x'], player_csv['y'], team, 0.6))
@@ -205,7 +205,7 @@ def animate_return(csv, delaunay=False):
         optimal = ax.scatter(optimal_paths[frame][:,0],optimal_paths[frame][:,1],marker="*",c="pink",zorder=17)
 
         #The lines on the optimal path
-        arrow, = ax.plot(optimal_paths[frame][:,0],optimal_paths[frame][:,1],c="black",alpha=0)
+        arrow, = ax.plot(optimal_paths[frame][:,0],optimal_paths[frame][:,1],c="black")
         
         for window in windows:
             """THESE ARE DEBUGGING VISUALISTIONS"""
@@ -220,7 +220,7 @@ def animate_return(csv, delaunay=False):
             #These draw lines between windows and their neighbors for degugging purposes
             if window.triangle == []:
                 for n in window.neighbors:
-                    ax.arrow(window.optimal_point[0],window.optimal_point[1],n.optimal_point[0]-window.optimal_point[0],n.optimal_point[1]-window.optimal_point[1],color="blue")
+                    ax.arrow(window.optimal_point[0],window.optimal_point[1],n.optimal_point[0]-window.optimal_point[0],n.optimal_point[1]-window.optimal_point[1],color="blue",)
             else:
                 for n in window.neighbors:
                     ax.arrow(window.optimal_point[0],window.optimal_point[1],n.optimal_point[0]-window.optimal_point[0],n.optimal_point[1]-window.optimal_point[1],color="orange")
