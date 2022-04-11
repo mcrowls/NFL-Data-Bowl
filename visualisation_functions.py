@@ -178,7 +178,6 @@ def process_frames(csv, delaunay=False, print_status=False):
 
         #Calculate the optimal path through the windows
         windows = create_window_neighbors(windows)
-        #side_windows = create_side_window_neighbors(windows[len(side_windows)-1:])
         optimal_path = get_optimal_path(windows,[returner_pos[frame][0],returner_pos[frame][1]],[10,25], returner_speed)
         optimal_path_points = []
         for window in optimal_path:
@@ -189,9 +188,6 @@ def process_frames(csv, delaunay=False, print_status=False):
         for w in windows:
             o.append(w.optimal_point)
             l.append(w.points)
-
-        #for s in side_windows:
-         #   l.append(s.points)
 
         l = np.array(l)
         lines.append(np.reshape(l,(-1,2)))
@@ -208,6 +204,8 @@ def animate_return(csv, delaunay=False, print_status=False, use_funcanim=False, 
     anim_values = []
     size,returner_pos,home,away,balls,lines,times,optimal_paths,optimal_path_points,windows,optimal_points,play_direction = process_frames(csv, delaunay, print_status)
     anim_values.extend([returner_pos, home,away,balls,lines,times])
+    print(np.array(returner_pos).reshape(-1,2))
+    ax.plot(np.array(returner_pos).reshape(-1,2)[:,0],np.array(returner_pos).reshape(-1,2)[:,1])
 
     for frame in range(size):
         # PLOT EVERYTHING
@@ -258,8 +256,6 @@ def animate_return(csv, delaunay=False, print_status=False, use_funcanim=False, 
             arrow.remove()
             optimal.remove()
 
-            #triang[0].remove()
-            #triang[1].remove()
     plt.savefig(f"visualisations/{playname[:len(playname) - 4]}.png", format="png")
     plt.show()
 
