@@ -128,19 +128,18 @@ def extract_one_game(game):
     return home, away, balls
 
 
-# returner_pos = csv[csv['displayName'] == punt_returner][receive_frame:]
-# returner_pos = list(zip(returner_pos.x.tolist(), returner_pos.y.tolist()))
-
 def get_pixels(pitch_size, grid_size):
     xs = np.linspace(0, pitch_size[0], grid_size[0])
     ys = np.linspace(0, pitch_size[1], grid_size[1])
+    x_spacing = xs[1] - xs[0]
+    y_spacing = ys[1] - ys[0]
     pixels = []
-    for x in xs:
+    for x in xs[:-1]:
         row = []
-        for y in ys:
-            row.append([x, y])
+        for y in ys[:-1]:
+            row.append([x + (x_spacing/2), y + (y_spacing/2)])
         pixels.append(row)
-    return pixels
+    return pixels, x_spacing, y_spacing
 
 
 def get_closest(point, points):
@@ -153,7 +152,7 @@ def get_closest(point, points):
 
 def assign_pixel_values(frame, home, away, pixels):
     # print(np.shape(pixels))
-    values = np.zeros((120, 53))
+    values = np.zeros(np.shape(pixels)[:-1])
     home = [home[player][frame] for player in home]
     away = [away[player][frame] for player in away]
     for row in pixels:
@@ -171,6 +170,65 @@ def assign_pixel_values(frame, home, away, pixels):
     return values
 
 
+def get_neighbours(pixel, x_spacing, y_spacing):
+    neighbours = []
+    if pixel[1] + y_spacing < 53.3:
+        # neighbours.append([pixel[0], pixel[1] + y_spacing])
+        neighbours.append([pixel[0] - x_spacing, pixel[1] + y_spacing])
+    if pixel[1] - y_spacing > 0:
+        # neighbours.append([pixel[0], pixel[1] - y_spacing])
+        neighbours.append([pixel[0] - x_spacing, pixel[1] - y_spacing])
+    neighbours.append([pixel[0] - x_spacing, pixel[1]])
+    return neighbours
+
+
+def measure_distance_to_blue(pixel, pixels, vector, pixel_values):
+    value = pixel_values[int(pixel[0]-0.5)][int(pixel[1]-0.5)]
+    truth = True
+    counter = 0
+    while truth == True:
+        next_pixel = [pixel[0] + vector[0], pixel[1] + vector[1]]
+        indicies = [int(next_pixel[0] - 0.5), int(next_pixel[1] - 0.5)]
+        if pixel_values[indicies[0]][indicies[1]] == value:
+            pixel = next_pixel
+            counter += 1
+        else:
+            truth = False
+        # if pixel_values
+    return counter
+
+
+def choose_direction(pixel, pixels, pixel_values):
+    sizes = []
+    vectors = [[-1, 1], [-1, 0], [-1, -1]]
+    for array in vectors:
+        sizes.append(measure_distance_to_blue(pixel, pixels, array, pixel_values))
+    if np.sum(sizes) == 0:
+        return [0, 0]
+    else:
+        index = sizes.index(np.max(sizes))
+        return vectors[index]
+
+
+
+def a_star_search(ball_position, pixels, pixel_values, x_spacing, y_spacing):
+    if round(ball_position[1]) > ball_position[1]:
+        y = round(ball_position[1]) - 0.5
+    else:
+        y = round(ball_position[1]) + 0.5
+    x = round(ball_position[0]) + 0.5
+    starting_node = [x, y]
+    truth = True
+    points = []
+    while truth == True:
+        points.append(starting_node)
+        direction = choose_direction(starting_node, pixels, pixel_values)
+        if direction == [0, 0]:
+            truth = False
+        starting_node = [starting_node[0] + direction[0], starting_node[1] + direction[1]]
+    return points
+
+
 csv = pd.read_csv('data/Receiving_Plays/play116-game2021010301.csv')
 home, away, balls = extract_one_game(csv)
 
@@ -180,24 +238,36 @@ punt_returner = returner(csv, receive_frame)
 returner_pos = csv[csv['displayName'] == punt_returner][receive_frame:]
 returner_pos = list(zip(returner_pos.x.tolist(), returner_pos.y.tolist()))
 
-pixels_array = []
-pixels = get_pixels([120, 53], [120, 53])
-for frame in range(np.max(csv['frameId'])):
-    pixel_values = assign_pixel_values(frame, home, away, pixels)
-    pixels_array.append(pixel_values)
+# pixels_array = []
+pixels, x_spacing, y_spacing = get_pixels([120, 53], [121, 54])
+# print(pixels)
+# get_neighbours(pixels[0][0], x_spacing, y_spacing)
+# for frame in range(receive_frame+1, receive_frame+10):
+frame = receive_frame + 5
+pixel_values = assign_pixel_values(frame, home, away, pixels)
+    # pixels_array.append(pixel_values)
 
 # print(pixels_array)
 
-
 fig, ax = plt.subplots()
-for frame in range(np.max(csv['frameId'])):
-    print(pixels_array[frame])
-    # pixel_values = assign_pixel_values(frame, home, away, pixels)
-    for player in home:
-        ax.scatter(home[player][frame][0], home[player][frame][1], c='b')
-    for player in away:
-        ax.scatter(away[player][frame][0], away[player][frame][1], c='r')
-    ax.imshow(np.flipud(pixels_array[frame].T), extent=(0, 120, 0, 53), cmap='bwr', alpha=0.5)
-    plt.pause(0.0001)
-    ax.clear()
+
+points = a_star_search(balls[frame], pixels, pixel_values, x_spacing, y_spacing)
+xs = []
+ys = []
+for point in points:
+    xs.append(point[0])
+    ys.append(point[1])
+ax.plot(xs, ys, 'k-')
+ax.scatter(points[-1][0], points[-1][1], marker='x', c='r')
+
+ax.scatter(balls[frame][0], balls[frame][1], c='k', s=0.9)
+# print(pixels_array[frame])
+# pixel_values = assign_pixel_values(frame, home, away, pixels)
+for player in home:
+    ax.scatter(home[player][frame][0], home[player][frame][1], c='b')
+for player in away:
+    ax.scatter(away[player][frame][0], away[player][frame][1], c='r')
+# ax.scatter(returner_pos[frame][0], returner_pos[frame][1], c='pink', s=0.8)
+image = ax.imshow(np.flipud(pixel_values.T), extent=(0, 120, 0, 53), cmap='bwr', alpha=0.4)
+
 plt.show()
