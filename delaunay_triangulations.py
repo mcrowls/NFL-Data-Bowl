@@ -245,7 +245,9 @@ def create_window_neighbors(windows):
                 #! But this causes problems because it causes some window neighbors to have other windows in between them
                 #! Which is why the check_window_neighbors was created
                 if len(other_window.triangle) == 0 and len(window.triangle) ==  1:
-                    if (np.array_equal(window.start, other_window.start) ) and other_window.optimal_point[0]<= window.optimal_point[0]:
+                    #? Just give every delaunay window every sideline window and hopefully the check sorts it out
+                    #if (np.array_equal(window.start, other_window.start) ) and other_window.optimal_point[0]<= window.optimal_point[0]:
+                    if other_window.optimal_point[0]<= window.optimal_point[0]:
                         window.neighbors.append(other_window)
 
             #this is to give sideline windows any neighbors
@@ -254,7 +256,8 @@ def create_window_neighbors(windows):
                 #if the delaunay window has the same start point as the sideline window, they should be neighbors
                 #! But this causes problems because it causes some window neighbors to have other windows in between them
                 #! Which is why the check_window_neighbors was created
-                if (np.allclose(other_window.start,window.start) or np.array_equal(other_window.end,window.start)) and len(other_window.triangle) == 1 and other_window.optimal_point[0]<= window.optimal_point[0]:
+                if len(other_window.triangle) == 1 and other_window.optimal_point[0]<= window.optimal_point[0]:
+                #if (np.allclose(other_window.start,window.start) or np.array_equal(other_window.end,window.start)) and len(other_window.triangle) == 1 :
                     window.neighbors.append(other_window)
 
 
@@ -274,7 +277,6 @@ def create_window_neighbors(windows):
     tops.sort(key=lambda x: x.optimal_point[1], reverse=True)
     lefts.sort(key=lambda x: x.optimal_point[0], reverse=True)
     rights.sort(key=lambda x: x.optimal_point[0], reverse=True)
-    print(len(tops))
 
     #give each sideline window it's adjacent sideline windows as neighbors
     for top in tops[1:len(tops)-1]:
@@ -285,8 +287,11 @@ def create_window_neighbors(windows):
         if next.optimal_point[0] > top.optimal_point[0]:
             top.neighbors.append(next)
 
-    tops[0].neighbors.append(tops[1])
-    tops[-1].neighbors.append(tops[-2])
+    if tops[0].optimal_point[0] < tops[1].optimal_point[0]:
+        tops[0].neighbors.append(tops[1])
+
+    if tops[-1].optimal_point[0] < tops[-2].optimal_point[0]:   
+        tops[-1].neighbors.append(tops[-2])
 
     for left in lefts[1:len(lefts)-1]:
         next = lefts[lefts.index(left)+1]
@@ -316,10 +321,6 @@ def check_window_neighbors(windows):
             if other_window == window:
                 continue
             
-            #Above check doesn't work for all windows?
-            #Some duplicate sideline windows?
-            if np.allclose(window.start,other_window.start) and np.allclose(window.end,other_window.end):
-                continue
 
             #Finding the equation of the other window to check for intersection
             slope_w = (other_window.start[1] - other_window.end[1]) / (other_window.start[0] - other_window.end[0])
@@ -439,7 +440,7 @@ def boundary_windows(hull_points, returner_pos_x):
         if points_y[i] < y_lim:
             right_window.append(points_after_returner[i])
 
-    return top_window, right_window, left_window
+    return np.unique(top_window,axis=0), np.unique(right_window,axis=0), np.unique(left_window,axis=0)
 
 def create_side_window_neighbors(side_windows):
     for window in side_windows:
@@ -472,6 +473,8 @@ def reconstruct_path(current_node, end, start_window,carrier):
     the_path = []
     the_path.append(Window(None,None,end))
     while current_node.parent != None:
+        #print(current_node.start,current_node.end)
+        #print(current_node.optimal_point)
         the_path.append(current_node)
         current_node = current_node.parent
     the_path.append(start_window)
@@ -487,7 +490,7 @@ def get_optimal_path(windows,carrier,end,return_speed):
     end_window = None
     for window in windows:
         #the start window is the closest window to the returner
-        if np.linalg.norm(carrier-window.optimal_point) < min_dist:
+        if np.linalg.norm(carrier-window.optimal_point) < min_dist and window.optimal_point[0] <= carrier[0]:
             min_dist = np.linalg.norm(carrier-window.optimal_point)
             start_window = window
         #the end window is the closest window to the end point

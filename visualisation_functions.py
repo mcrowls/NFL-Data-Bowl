@@ -130,8 +130,8 @@ def process_frames(csv, delaunay=False, print_status=False):
 
     for player in np.unique(csv['displayName']):
         player_csv = csv[csv['displayName'] == player][receive_frame:]
-        #size = np.shape(player_csv)[0]
-        size = 20
+        size = np.shape(player_csv)[0]
+        #size = 37
         team = csv[csv['displayName'] == player]['team'].iloc[0]
         if team == attacking_team:
             attackers.append(Player(player, player_csv['x'], player_csv['y'], team, 0.6))
@@ -157,6 +157,7 @@ def process_frames(csv, delaunay=False, print_status=False):
     right_windows = []
     left_windows = []
     optimal_paths = []
+    all_windows = []
     start_time = time.time()
     # Get data before for smooth animation
     for frame in range(size): 
@@ -192,32 +193,40 @@ def process_frames(csv, delaunay=False, print_status=False):
         l = np.array(l)
         lines.append(np.reshape(l,(-1,2)))
         optimal_points.append(o)
+        all_windows.append(windows)
         print("Processed frame", frame+1, "/",size,"||",round(((frame+1)/size)*100),"%")
     
     end_time = time.time()
     if print_status:
         print("Took",round(end_time-start_time,2),"s to process",size,"frames")
-    return size, returner_pos, points_def, points_off, balls, lines, times, optimal_paths, optimal_path_points, windows, optimal_points, play_direction
+    return size, returner_pos, points_def, points_off, balls, lines, times, optimal_paths, optimal_path_points, windows, all_windows, optimal_points, play_direction
 
 def animate_return(csv, delaunay=False, print_status=False, use_funcanim=False, outpath=visoutputpath, playname=play_folderpath):
     fig, ax = drawPitch(100, 53.3)
     anim_values = []
-    size,returner_pos,home,away,balls,lines,times,optimal_paths,optimal_path_points,windows,optimal_points,play_direction = process_frames(csv, delaunay, print_status)
+    size,returner_pos,home,away,balls,lines,times,optimal_paths,optimal_path_points,windows,all_windows,optimal_points,play_direction = process_frames(csv, delaunay, print_status)
     anim_values.extend([returner_pos, home,away,balls,lines,times])
-    print(np.array(returner_pos).reshape(-1,2))
     ax.plot(np.array(returner_pos).reshape(-1,2)[:,0],np.array(returner_pos).reshape(-1,2)[:,1])
 
     for frame in range(size):
         # PLOT EVERYTHING
         optimal = ax.scatter(optimal_paths[frame][:,0],optimal_paths[frame][:,1],marker="*",c="pink",zorder=17)
         
-        for window in windows:
+
+        neighborlines = []
+        for window in all_windows[frame]:
             #t = str(round(window.optimal_point[0],1))+" "+str(round(window.optimal_point[1],1))
             #ax.text(window.optimal_point[0]-0.5,window.optimal_point[1]-0.5,t)
             """tt = ""
             for tri in window.triangle:
                 tt = tt+" "+str(tri)
             ax.text(window.optimal_point[0]+0.1,window.optimal_point[1]+0.1,tt,c="pink")"""
+            if window.triangle == []:
+                for n in window.neighbors:
+                    neighborlines.append(ax.plot([window.optimal_point[0],n.optimal_point[0]],[window.optimal_point[1],n.optimal_point[1]],color="blue",))
+            else:
+                for n in window.neighbors:
+                    neighborlines.append(ax.plot([window.optimal_point[0],n.optimal_point[0]],[window.optimal_point[1],n.optimal_point[1]],color="orange"))
         
         arrow, = ax.plot(optimal_paths[frame][:,0],optimal_paths[frame][:,1],c="black")
         retur = ax.text(returner_pos[frame][0]-0.5, returner_pos[frame][1]-0.5, 'R', zorder=15, c="pink")
@@ -255,6 +264,8 @@ def animate_return(csv, delaunay=False, print_status=False, use_funcanim=False, 
             w.remove()
             arrow.remove()
             optimal.remove()
+            for n in neighborlines:
+                n[0].remove()
 
     plt.savefig(f"visualisations/{playname[:len(playname) - 4]}.png", format="png")
     plt.show()
