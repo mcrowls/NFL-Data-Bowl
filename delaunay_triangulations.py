@@ -245,8 +245,6 @@ def create_window_neighbors(windows):
                 #! But this causes problems because it causes some window neighbors to have other windows in between them
                 #! Which is why the check_window_neighbors was created
                 if len(other_window.triangle) == 0 and len(window.triangle) ==  1:
-                    #? Just give every delaunay window every sideline window and hopefully the check sorts it out
-                    #if (np.array_equal(window.start, other_window.start) ) and other_window.optimal_point[0]<= window.optimal_point[0]:
                     if other_window.optimal_point[0]<= window.optimal_point[0]:
                         window.neighbors.append(other_window)
 
@@ -257,9 +255,7 @@ def create_window_neighbors(windows):
                 #! But this causes problems because it causes some window neighbors to have other windows in between them
                 #! Which is why the check_window_neighbors was created
                 if len(other_window.triangle) == 1 and other_window.optimal_point[0]<= window.optimal_point[0]:
-                #if (np.allclose(other_window.start,window.start) or np.array_equal(other_window.end,window.start)) and len(other_window.triangle) == 1 :
                     window.neighbors.append(other_window)
-
 
     #this gives sideline windows sideline neighbors
     tops = []
@@ -296,12 +292,16 @@ def create_window_neighbors(windows):
     for left in lefts[1:len(lefts)-1]:
         next = lefts[lefts.index(left)+1]
         left.neighbors.append(next)
-    lefts[0].neighbors.append(lefts[1])
+
+    if len(lefts) > 1:
+        lefts[0].neighbors.append(lefts[1])
 
     for right in rights[1:len(rights)-1]:
         next = rights[rights.index(right)+1]
         right.neighbors.append(next)
-    rights[0].neighbors.append(rights[1])
+
+    if len(rights) > 1:
+        rights[0].neighbors.append(rights[1])
 
     #the first top sideline window should be connected to the nearest left sideline window
     tops[0].neighbors.append(lefts[0])
@@ -473,10 +473,14 @@ def reconstruct_path(current_node, end, start_window,carrier):
     the_path = []
     the_path.append(Window(None,None,end))
     while current_node.parent != None:
-        #print(current_node.start,current_node.end)
-        #print(current_node.optimal_point)
         the_path.append(current_node)
         current_node = current_node.parent
+        #Sometimes this causes an infinite loop because two nodes have each other as parents
+        #so this just kills the loop if that happens. Not ideal behaviour but at least it won't hang
+        if current_node in the_path:
+            the_path.append(start_window)
+            the_path.append(Window(None,None,carrier))
+            return the_path
     the_path.append(start_window)
     the_path.append(Window(None,None,carrier))
     return the_path
