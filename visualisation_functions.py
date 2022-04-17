@@ -1,5 +1,5 @@
 import matplotlib
-from delaunay_triangulations import Player, create_window_neighbors, get_optimal_path, get_points_of_defenders, returner, get_lines_from_delaunay, \
+from delaunay_triangulations import Player, create_window_neighbors, frechet_distance, get_optimal_path, get_points_of_defenders, returner, get_lines_from_delaunay, \
     get_arrival_times, get_defensive_locations, boundary_windows, get_lines_from_sidelines
 from players import get_player_speed
 try:
@@ -131,7 +131,7 @@ def process_frames(csv, delaunay=False, print_status=False):
     for player in np.unique(csv['displayName']):
         player_csv = csv[csv['displayName'] == player][receive_frame:]
         size = np.shape(player_csv)[0]
-        #size = 2
+        #size = 1
         team = csv[csv['displayName'] == player]['team'].iloc[0]
         if team == attacking_team:
             attackers.append(Player(player, player_csv['x'], player_csv['y'], team, 0.6))
@@ -231,7 +231,7 @@ def animate_return(csv, delaunay=False, print_status=False, use_funcanim=False, 
         arrow, = ax.plot(optimal_paths[frame][:,0],optimal_paths[frame][:,1],c="black")
         retur = ax.text(returner_pos[frame][0]-0.5, returner_pos[frame][1]-0.5, 'R', zorder=15, c="pink")
 
-        
+        print(frechet_distance(np.array(returner_pos).reshape(-1,2),optimal_paths[frame]))
         returner_line, = ax.plot([returner_pos[frame][0], returner_pos[frame][0]], [0, 53.3], "--", zorder=5, c="black")
         returner_path, = ax.plot([returner_pos[frame][0], returner_pos[frame][0]], [0, 53.3], "-", zorder=5, c="gray", linewidth=5)
         returner_pos_, = ax.plot([returner_pos[frame][0], returner_pos[frame][0]], [0, 53.3], 'o', markersize=13, markerfacecolor="gray", markeredgewidth=1, markeredgecolor="white", zorder=9)

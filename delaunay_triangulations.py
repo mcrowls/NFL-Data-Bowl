@@ -41,6 +41,9 @@ def finding_five_yard(array):
             relevant_points.append(array[i])
             truth = True
         i += 1
+        #If the path is less than 5 yards in total, need to stop 
+        if i == len(array):
+            truth = True
     return relevant_points
 
 
@@ -77,6 +80,20 @@ def frechet_distance(actual_path, predicted_path):
     predicted_path[-1] = find_five_point(predicted_path)
     actual_path = path_interpolate(actual_path, 50)
     predicted_path = path_interpolate(predicted_path, 50)
+
+    print(np.array(actual_path).shape)
+    print(np.array(predicted_path).shape)
+    #Sometimes the actual path isn't at least 5 yards long, so this just shortens the predicted path
+    if (np.array(actual_path).shape[0] < np.array(predicted_path).shape[0]):
+        actual_shape = np.array(actual_path).shape[0]
+        predicted_shape = np.array(predicted_path).shape[0]
+        difference = predicted_shape - actual_shape
+        predicted_path = predicted_path[:-difference]
+    elif (np.array(actual_path).shape[0] > np.array(predicted_path).shape[0]):
+        actual_shape = np.array(actual_path).shape[0]
+        predicted_shape = np.array(predicted_path).shape[0]
+        difference = actual_shape - predicted_shape
+        actual_path = actual_path[:-difference]
     return frdist(actual_path, predicted_path)
 
 def distance(loc1, loc2):
