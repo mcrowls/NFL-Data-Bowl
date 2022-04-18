@@ -131,7 +131,7 @@ def process_frames(csv, delaunay=False, print_status=False):
     for player in np.unique(csv['displayName']):
         player_csv = csv[csv['displayName'] == player][receive_frame:]
         size = np.shape(player_csv)[0]
-        #size = 2
+        #size = 1
         team = csv[csv['displayName'] == player]['team'].iloc[0]
         if team == attacking_team:
             attackers.append(Player(player, player_csv['x'], player_csv['y'], team, 0.6))
@@ -164,8 +164,14 @@ def process_frames(csv, delaunay=False, print_status=False):
 
     yardage_gained = returner_pos[0][0] - returner_pos[-1][0]
 
-    for frame in range(size): 
-        points_def.append(np.array(get_points_of_defenders(defenders, frame)))
+    for frame in range(size):
+        #if the returner goes out of bounds then stop calculating
+        if returner_pos[frame][1] <= 0 or returner_pos[frame][1] >= 53:
+            print("Returner went out of bounds, stopping calculations")
+            yardage_gained = returner_pos[0][0] - returner_pos[frame][0]
+            size = frame + 1
+            break
+        points_def.append(np.array(get_points_of_defenders(defenders[:6], frame)))
         points_off.append(np.array(get_points_of_defenders(attackers, frame)))
         if delaunay:
             bounds = ConvexHull(points_def[frame]).vertices
@@ -178,7 +184,7 @@ def process_frames(csv, delaunay=False, print_status=False):
         tri = Delaunay(points_def[frame])
         _, windows = get_lines_from_delaunay(tri,defenders,frame)
         _,side_windows = get_lines_from_sidelines(top,left,right,returner_pos[frame])
-        arrival_time, windows = get_arrival_times(windows,side_windows,defenders,attackers,frame)
+        arrival_time, windows = get_arrival_times(windows,side_windows,defenders,attackers,frame,returner_pos[frame])
         times.append(arrival_time)
 
         #Calculate the optimal path through the windows
@@ -236,10 +242,10 @@ def animate_return(csv, delaunay=False, print_status=False, use_funcanim=False, 
                 for n in window.neighbors:
                     neighborlines.append(ax.plot([window.optimal_point[0],n.optimal_point[0]],[window.optimal_point[1],n.optimal_point[1]],color="orange"))
         
-        arrow, = ax.plot(optimal_paths[frame][:,0],optimal_paths[frame][:,1],c="black")
+        arrow, = ax.plot(optimal_paths[frame][:,0],optimal_paths[frame][:,1],c="black",zorder=15)
         retur = ax.text(returner_pos[frame][0]-0.5, returner_pos[frame][1]-0.5, 'R', zorder=15, c="pink")
 
-        returner_line, = ax.plot([returner_pos[frame][0], returner_pos[frame][0]], [0, 53.3], "--", zorder=5, c="black")
+        returner_line, = ax.plot([returner_pos[frame][0], returner_pos[frame][0]], [0, 53.3], "--", zorder=6, c="black")
         returner_path, = ax.plot([returner_pos[frame][0], returner_pos[frame][0]], [0, 53.3], "-", zorder=5, c="gray", linewidth=5)
         returner_pos_, = ax.plot([returner_pos[frame][0], returner_pos[frame][0]], [0, 53.3], 'o', markersize=13, markerfacecolor="gray", markeredgewidth=1, markeredgecolor="white", zorder=9)
         defensive, = ax.plot(home[frame][:, 0], home[frame][:, 1], 'o', markersize=10, markerfacecolor="r",
@@ -286,7 +292,7 @@ def visualise_play(playpath_, changeFigsize=False, outpath=visoutputpath, playna
 """
 Get yardage and frechet distance for one play
 """
-def process_play(playpath_,playname):
+def process_play(playpath_,playname,output_results):
     csv = pd.read_csv(playpath_)
     try:
         size,returner_pos,home,away,balls,lines,times,optimal_paths,optimal_path_points,windows,all_windows,optimal_points,play_direction,frechets,yardage_gained = process_frames(csv, True, True)
@@ -296,11 +302,11 @@ def process_play(playpath_,playname):
         print(median_deviation)
         d = {'play':[playname],'yardage':[yardage_gained],'deviation':median_deviation}
         df = pd.DataFrame(data=d)
-        df.to_csv('results.csv', mode='a', header=False)
+        df.to_csv(output_results, mode='a', header=False)
     except Exception as e:
         d = {'play':[playname],'yardage':[None],'deviation':None}
         df = pd.DataFrame(data=d)
-        df.to_csv('results.csv', mode='a', header=False)
+        df.to_csv(output_results, mode='a', header=False)
     
     
 

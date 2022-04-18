@@ -7,16 +7,18 @@ from multiprocessing import Pool
 import matplotlib.pyplot as plt
 import numpy as np
 
-results = pd.read_csv("results.csv")
+output_results = "results-afterfix1.csv"
+
+results = pd.read_csv(output_results)
 
 def processing(play):
     if play in results.values:
         return
     print(play)
-    process_play(input_folderpath+"/receiving_plays/"+play,play)
+    process_play(input_folderpath+"/receiving_plays/"+play,play,output_results)
 
 def create_graph():
-    df = pd.read_csv("results.csv")
+    df = pd.read_csv(output_results)
     df = df.dropna()
     df = df.drop(df[df.yardage < 0].index)
     
@@ -29,7 +31,7 @@ def create_graph():
 
 def process_plays():
     #Change this number depending on how many cores you want to use for this
-    pool = Pool(8)
+    pool = Pool()
     pool.map(processing,os.listdir(input_folderpath+"/receiving_plays"))
 
 
