@@ -131,7 +131,7 @@ def process_frames(csv, delaunay=False, print_status=False):
     for player in np.unique(csv['displayName']):
         player_csv = csv[csv['displayName'] == player][receive_frame:]
         size = np.shape(player_csv)[0]
-        #size = 1
+        #size = 2
         team = csv[csv['displayName'] == player]['team'].iloc[0]
         if team == attacking_team:
             attackers.append(Player(player, player_csv['x'], player_csv['y'], team, 0.6))
@@ -158,8 +158,12 @@ def process_frames(csv, delaunay=False, print_status=False):
     left_windows = []
     optimal_paths = []
     all_windows = []
+    frechets = []
     start_time = time.time()
     # Get data before for smooth animation
+
+    yardage_gained = returner_pos[0][0] - returner_pos[-1][0]
+
     for frame in range(size): 
         points_def.append(np.array(get_points_of_defenders(defenders, frame)))
         points_off.append(np.array(get_points_of_defenders(attackers, frame)))
@@ -183,6 +187,10 @@ def process_frames(csv, delaunay=False, print_status=False):
         optimal_path_points = []
         for window in optimal_path:
             optimal_path_points.append(window.optimal_point)
+
+        frechetDistance = frechet_distance(np.array(returner_pos).reshape(-1,2),optimal_path_points)
+        frechets.append(frechetDistance)
+
         optimal_paths.append(np.reshape(optimal_path_points,(-1,2)))
         o = []
         l = []
@@ -199,12 +207,12 @@ def process_frames(csv, delaunay=False, print_status=False):
     end_time = time.time()
     if print_status:
         print("Took",round(end_time-start_time,2),"s to process",size,"frames")
-    return size, returner_pos, points_def, points_off, balls, lines, times, optimal_paths, optimal_path_points, windows, all_windows, optimal_points, play_direction
+    return size, returner_pos, points_def, points_off, balls, lines, times, optimal_paths, optimal_path_points, windows, all_windows, optimal_points, play_direction,frechets,yardage_gained
 
 def animate_return(csv, delaunay=False, print_status=False, use_funcanim=False, outpath=visoutputpath, playname=play_folderpath):
     fig, ax = drawPitch(100, 53.3)
     anim_values = []
-    size,returner_pos,home,away,balls,lines,times,optimal_paths,optimal_path_points,windows,all_windows,optimal_points,play_direction = process_frames(csv, delaunay, print_status)
+    size,returner_pos,home,away,balls,lines,times,optimal_paths,optimal_path_points,windows,all_windows,optimal_points,play_direction,frechets,yardage_gained = process_frames(csv, delaunay, print_status)
     anim_values.extend([returner_pos, home,away,balls,lines,times])
     ax.plot(np.array(returner_pos).reshape(-1,2)[:,0],np.array(returner_pos).reshape(-1,2)[:,1])
 
@@ -231,7 +239,6 @@ def animate_return(csv, delaunay=False, print_status=False, use_funcanim=False, 
         arrow, = ax.plot(optimal_paths[frame][:,0],optimal_paths[frame][:,1],c="black")
         retur = ax.text(returner_pos[frame][0]-0.5, returner_pos[frame][1]-0.5, 'R', zorder=15, c="pink")
 
-        print(frechet_distance(np.array(returner_pos).reshape(-1,2),optimal_paths[frame]))
         returner_line, = ax.plot([returner_pos[frame][0], returner_pos[frame][0]], [0, 53.3], "--", zorder=5, c="black")
         returner_path, = ax.plot([returner_pos[frame][0], returner_pos[frame][0]], [0, 53.3], "-", zorder=5, c="gray", linewidth=5)
         returner_pos_, = ax.plot([returner_pos[frame][0], returner_pos[frame][0]], [0, 53.3], 'o', markersize=13, markerfacecolor="gray", markeredgewidth=1, markeredgecolor="white", zorder=9)
@@ -275,6 +282,27 @@ def visualise_play(playpath_, changeFigsize=False, outpath=visoutputpath, playna
         plt.rcParams['figure.figsize'] = [18, 10]
     csv = pd.read_csv(playpath_)
     animate_return(csv, delaunay=True, outpath=outpath, playname=playname)
+
+"""
+Get yardage and frechet distance for one play
+"""
+def process_play(playpath_,playname):
+    csv = pd.read_csv(playpath_)
+    try:
+        size,returner_pos,home,away,balls,lines,times,optimal_paths,optimal_path_points,windows,all_windows,optimal_points,play_direction,frechets,yardage_gained = process_frames(csv, True, True)
+        print(yardage_gained)
+        print(frechets)
+        median_deviation = np.median(np.array(frechets))
+        print(median_deviation)
+        d = {'play':[playname],'yardage':[yardage_gained],'deviation':median_deviation}
+        df = pd.DataFrame(data=d)
+        df.to_csv('results.csv', mode='a', header=False)
+    except Exception as e:
+        d = {'play':[playname],'yardage':[None],'deviation':None}
+        df = pd.DataFrame(data=d)
+        df.to_csv('results.csv', mode='a', header=False)
+    
+    
 
 # Draw the delaunay triangles frame by frame
 def visualise_delaunay_play(playpath_, outpath=visoutputpath, playname=play_folderpath, size=40):
@@ -420,4 +448,4 @@ def visualise_play_FuncAnimation(play=playpath, outpath=visoutputpath, playname=
 
 #OLD visualise_delaunay_play(playpath)
 #visualise_play_FuncAnimation(playpath)
-visualise_play(playpath, changeFigsize=True)
+#visualise_play(playpath, changeFigsize=True)

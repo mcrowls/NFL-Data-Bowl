@@ -81,8 +81,6 @@ def frechet_distance(actual_path, predicted_path):
     actual_path = path_interpolate(actual_path, 50)
     predicted_path = path_interpolate(predicted_path, 50)
 
-    print(np.array(actual_path).shape)
-    print(np.array(predicted_path).shape)
     #Sometimes the actual path isn't at least 5 yards long, so this just shortens the predicted path
     if (np.array(actual_path).shape[0] < np.array(predicted_path).shape[0]):
         actual_shape = np.array(actual_path).shape[0]
