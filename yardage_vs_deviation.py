@@ -35,7 +35,7 @@ def process_plays():
 
 if __name__ == '__main__':
 
-    process_plays()
+    #process_plays()
     create_graph()
 
 
