@@ -13,6 +13,7 @@ from helpers import avg_player_speed
 import statistics
 from players import Player
 from frechetdist import frdist
+import copy
 
 class Window:
     def __init__(self, points, optimal_time,optimal_point,triangle = [],start=[],end=[],direction=None):
@@ -341,115 +342,105 @@ def create_window_neighbors(windows):
     windows = check_window_neighbors(windows)
     return windows
 
+def check_intercept(window,other_window,neighbor,slope_w,intercept_w):
+    x1 = window.optimal_point[0]
+    y1 = window.optimal_point[1]
+    x2 = neighbor.optimal_point[0]
+    y2 = neighbor.optimal_point[1]
+    #the line between the optimal point of a window and it's neighbor's optimal point
+    slope = (y2 - y1) / (x2 - x1)
+    intercept = y2 - slope * x2
+
+    #Finding the point of intersection between the neighbor line and the other window
+    if math.isinf(slope_w):
+        intercept_x = other_window.start[0]
+    elif math.isinf(slope):
+        intercept_x = window.optimal_point[0]
+    else:
+        intercept_x = (intercept - intercept_w) / (slope_w - slope)
+        if math.isnan(intercept_x):
+            intercept_x = float('inf')
+
+    if math.isinf(slope_w):
+        intercept_y = slope * intercept_x + intercept
+    elif math.isinf(slope):
+        intercept_y = slope_w * intercept_x + intercept_w
+    else:
+        intercept_y = slope * intercept_x + intercept
+    
+    if math.isnan(intercept_y):
+        intercept_y = float('inf')
+
+    #Notebook code rounded everything, not sure if it's necessary
+    intercept_x = round(intercept_x,2)
+    intercept_y = round(intercept_y,2)
+    x1 = round(window.optimal_point[0],2)
+    y1 = round(window.optimal_point[1],2)
+    x2 = round(neighbor.optimal_point[0],2)
+    y2 = round(neighbor.optimal_point[1],2)
+    wx1 = round(other_window.start[0],2)
+    wy1 = round(other_window.start[1],2)
+    wx2 = round(other_window.end[0],2)
+    wy2 = round(other_window.end[1],2)
+
+    is_intersect = ((intercept_x <= x1 and intercept_x >= x2) or (intercept_x >= x1 and intercept_x <= x2)) and \
+    ((intercept_y <= y1 and intercept_y >= y2) or (intercept_y >= y1 and intercept_y <= y2)) and \
+    ((intercept_x <= wx1 and intercept_x >= wx2) or (intercept_x >= wx1 and intercept_x <= wx2)) and \
+    ((intercept_y <= wy1 and intercept_y >= wy2) or (intercept_y >= wy1 and intercept_y <= wy2))
+
+    return is_intersect
+
+def get_window_equation(window):
+    #Finding the equation of the other window to check for intersection
+    if (window.start[0] - window.end[0] == 0):
+        slope_w = float('inf')
+    else:
+        slope_w = (window.start[1] - window.end[1]) / (window.start[0] - window.end[0])
+    if not math.isinf(slope_w):   
+        intercept_w = window.start[1] - slope_w * window.start[0]
+    else:
+        intercept_w = float('inf')
+    
+    return slope_w,intercept_w
+
+
 def check_window_neighbors(windows):
     #For each window's neighbors, check if the line between a window and it's neighbour intersect any other window,
     #If so, remove that neighbour
     for window in windows:  
         for other_window in windows:
-            #if window.direction == "start" and other_window.optimal_point[0] > 100:
-                #print("This window exists")
             if other_window == window:
                 continue
             
             if window.direction == "start" and other_window.direction == "start":
-                #wtf??!
                 continue
 
-            #Finding the equation of the other window to check for intersection
-            if (other_window.start[0] - other_window.end[0] == 0):
-                slope_w = float('inf')
-            else:
-                slope_w = (other_window.start[1] - other_window.end[1]) / (other_window.start[0] - other_window.end[0])
-            if not math.isinf(slope_w):   
-                intercept_w = other_window.start[1] - slope_w * other_window.start[0]
-            else:
-                intercept_w = float('inf')
+            slope_w, intercept_w = get_window_equation(other_window)
 
+            sus_neighbors = []
             for neighbor in window.neighbors:
-                #if window.direction == "start":
-                    #print("Going to check")
-                    #print(neighbor.start,neighbor.end)
-                    #print(window.start,window.end)
-                    #print(other_window.start,other_window.end)
+
                 #Don't check for intersections between delaunay windows and delaunay neighbors as those are all correct
                 if len(window.triangle) > 0 and len(neighbor.triangle) > 0:
                     continue
-                if neighbor == window or neighbor == other_window:
-                    #if window.direction == "start" and other_window.optimal_point[0] > 100:
-                        #print("??")
-                        #print(other_window.start,other_window.end)
-                        #print(neighbor.start,neighbor.end)
-                        #print(window.start,window.end)
-                        #
-                        
+               
+                if neighbor == window or neighbor == other_window: 
                     continue
+               
                 #Don't check intersection between sideline window and sideline neighbor as those are all correct
                 if len(window.triangle) == 0 and len(neighbor.triangle) == 0 and not window.direction == "start":
                     continue
                 
-                x1 = window.optimal_point[0]
-                y1 = window.optimal_point[1]
-                x2 = neighbor.optimal_point[0]
-                y2 = neighbor.optimal_point[1]
-                #the line between the optimal point of a window and it's neighbor's optimal point
-                slope = (y2 - y1) / (x2 - x1)
-                intercept = y2 - slope * x2
-            
-                #Finding the point of intersection between the neighbor line and the other window
-                if math.isinf(slope_w):
-                    intercept_x = other_window.start[0]
-                elif math.isinf(slope):
-                    intercept_x = window.optimal_point[0]
-                else:
-                    intercept_x = (intercept - intercept_w) / (slope_w - slope)
-                    if math.isnan(intercept_x):
-                        intercept_x = float('inf')
+                is_intersect = check_intercept(window,other_window,neighbor,slope_w,intercept_w)
 
-                if math.isinf(slope_w):
-                    intercept_y = slope * intercept_x + intercept
-                elif math.isinf(slope):
-                    intercept_y = slope_w * intercept_x + intercept_w
-                else:
-                    intercept_y = slope * intercept_x + intercept
-                
-                if math.isnan(intercept_y):
-                    intercept_y = float('inf')
-
-                #Notebook code rounded everything, not sure if it's necessary
-                intercept_x = round(intercept_x,2)
-                intercept_y = round(intercept_y,2)
-                x1 = round(window.optimal_point[0],2)
-                y1 = round(window.optimal_point[1],2)
-                x2 = round(neighbor.optimal_point[0],2)
-                y2 = round(neighbor.optimal_point[1],2)
-                wx1 = round(other_window.start[0],2)
-                wy1 = round(other_window.start[1],2)
-                wx2 = round(other_window.end[0],2)
-                wy2 = round(other_window.end[1],2)
-
-                is_intersect = ((intercept_x <= x1 and intercept_x >= x2) or (intercept_x >= x1 and intercept_x <= x2)) and \
-                ((intercept_y <= y1 and intercept_y >= y2) or (intercept_y >= y1 and intercept_y <= y2)) and \
-                ((intercept_x <= wx1 and intercept_x >= wx2) or (intercept_x >= wx1 and intercept_x <= wx2)) and \
-                ((intercept_y <= wy1 and intercept_y >= wy2) or (intercept_y >= wy1 and intercept_y <= wy2))
-
-                
                 if is_intersect:
-                    #if window.direction == "start":
-                        #print("removed")
-                        #print(intercept_x,intercept_y)
-                        #print(x1,y1,x2,y2)
-                        #print(wx1,wy1,wx2,wy2)
-                    window.neighbors.remove(neighbor)
-                    break
-                #else:
-                    #if window.direction == "start" and other_window.triangle == []:
-                        #print("not removed")
-                        #print(intercept_x,intercept_y)
-                        #print(x1,y1,x2,y2)
-                        #print(wx1,wy1,wx2,wy2)
-                        
-                    
+                    sus_neighbors.append(neighbor)
+
+            for sus in sus_neighbors:
+                window.neighbors.remove(sus)
+                                 
     return windows
+
 
 def pointInRect(point,rect):
     x1, y1, w, h = rect
