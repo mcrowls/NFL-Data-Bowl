@@ -170,7 +170,7 @@ def get_lines_from_sidelines(top,left,right,returner_pos):
     points = []
     windows = []
     for t in top:
-        line = np.linspace(t,[returner_pos[0],t[1]],22,endpoint=False)[1:]
+        line = np.linspace(t,[returner_pos[0],t[1]],22,endpoint=True)[1:]
         points.append(line)
         windows.append(Window(line,0,[0,0],start=t,end=line[-1],direction="t"))
 
@@ -409,7 +409,7 @@ def check_window_neighbors(windows):
     #If so, remove that neighbour
     for window in windows:  
         for other_window in windows:
-            if other_window == window:
+            if other_window == window or other_window.direction == "start":
                 continue
             
             if window.direction == "start" and other_window.direction == "start":
@@ -495,21 +495,6 @@ def boundary_windows(hull_points, returner_pos_x):
 
     return np.unique(top_window,axis=0), np.unique(right_window,axis=0), np.unique(left_window,axis=0)
 
-def create_side_window_neighbors(side_windows):
-    for window in side_windows:
-        print("window")
-        print(window.optimal_point)
-        print(window.start)
-        for other_window in side_windows:
-            
-            if other_window ==  window:
-                continue
-            print(other_window.optimal_point)
-            print(window.start)
-            print(other_window.start)
-            if np.array_equal(other_window.start,window.start) and len(other_window.triangle) == 1 and other_window.optimal_point[0]<= window.optimal_point[0]:
-                window.neighbors.append(other_window)
-    return side_windows
 
 def get_heuristic(current_node,neighbor,end,return_speed):
     neighbor.g = (np.linalg.norm(neighbor.optimal_point - current_node.optimal_point)/return_speed)/neighbor.optimal_time
@@ -522,9 +507,15 @@ def get_heuristic(current_node,neighbor,end,return_speed):
     neighbor.f = neighbor.g/neighbor.h
     return neighbor
 
+def get_heuristic2(current_node,neighbor,end,return_speed):
+    neighbor.g = (np.linalg.norm(neighbor.optimal_point - current_node.optimal_point)/return_speed)
+    neighbor.h = np.linalg.norm(neighbor.optimal_point[0] - end[0])
+    neighbor.f = neighbor.g+neighbor.h
+    return neighbor
+
 def reconstruct_path(current_node, end, start_window,carrier):
     the_path = []
-    the_path.append(Window(None,None,end))
+    the_path.append(Window(None,None,[10,current_node.optimal_point[1]]))
     while current_node.parent != None:
         the_path.append(current_node)
         current_node = current_node.parent
@@ -539,20 +530,16 @@ def reconstruct_path(current_node, end, start_window,carrier):
     return the_path
 
 def get_optimal_path(windows,carrier,end,return_speed):
-    #find the closest windows to the carrier
-    min_dist = float('inf')
+
     start_window = None
     #assuming end is an x y point, need to find the window closest to the end
     min_dist_end = float('inf')
     end_window = None
     for window in windows:
-        #the start window is the closest window to the returner
         if window.direction == "start":
-        #if np.linalg.norm(carrier-window.optimal_point) < min_dist and window.optimal_point[0] <= carrier[0]:
-            #min_dist = np.linalg.norm(carrier-window.optimal_point)
             start_window = window
         #the end window is the closest window to the end point
-        if np.linalg.norm(end-window.optimal_point) < min_dist_end:
+        if np.linalg.norm(end[0]-window.optimal_point[0]) < min_dist_end:
             min_dist_end = np.linalg.norm(end-window.optimal_point)
             end_window = window
     closed_list = []

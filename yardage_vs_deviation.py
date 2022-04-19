@@ -6,8 +6,9 @@ import pandas as pd
 from multiprocessing import Pool
 import matplotlib.pyplot as plt
 import numpy as np
+import random
 
-output_results = "results-afterfix1.csv"
+output_results = "results-after-distance-fix.csv"
 
 results = pd.read_csv(output_results)
 
@@ -32,13 +33,13 @@ def create_graph():
 def process_plays():
     #Change this number depending on how many cores you want to use for this
     pool = Pool()
-    pool.map(processing,os.listdir(input_folderpath+"/receiving_plays"))
+    pool.map(processing,random.sample(os.listdir(input_folderpath+"/receiving_plays"),50))
 
 
 if __name__ == '__main__':
 
-    #process_plays()
-    create_graph()
+    process_plays()
+    #create_graph()
 
 
 
