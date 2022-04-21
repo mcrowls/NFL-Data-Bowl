@@ -194,8 +194,11 @@ def process_frames(csv, delaunay=False, print_status=False):
         for window in optimal_path:
             optimal_path_points.append(window.optimal_point)
 
-        frechetDistance = frechet_distance(np.array(returner_pos).reshape(-1,2),optimal_path_points)
-        frechets.append(frechetDistance)
+        if abs(returner_pos[frame][0] - returner_pos[-1][0]) > 1:
+            frechetDistance = frechet_distance(np.array(returner_pos[frame:]).reshape(-1,2),optimal_path_points)
+
+            #frechetDistance = frechetDistance * 5 /
+            frechets.append(frechetDistance)
 
         optimal_paths.append(np.reshape(optimal_path_points,(-1,2)))
         o = []
@@ -209,7 +212,7 @@ def process_frames(csv, delaunay=False, print_status=False):
         optimal_points.append(o)
         all_windows.append(windows)
         print("Processed frame", frame+1, "/",size,"||",round(((frame+1)/size)*100),"%")
-    
+
     end_time = time.time()
     if print_status:
         print("Took",round(end_time-start_time,2),"s to process",size,"frames")
@@ -226,15 +229,8 @@ def animate_return(csv, delaunay=False, print_status=False, use_funcanim=False, 
         # PLOT EVERYTHING
         optimal = ax.scatter(optimal_paths[frame][:,0],optimal_paths[frame][:,1],marker="*",c="pink",zorder=17)
         
-
         neighborlines = []
         for window in all_windows[frame]:
-            #t = str(round(window.optimal_point[0],1))+" "+str(round(window.optimal_point[1],1))
-            #ax.text(window.optimal_point[0]-0.5,window.optimal_point[1]-0.5,t)
-            """tt = ""
-            for tri in window.triangle:
-                tt = tt+" "+str(tri)
-            ax.text(window.optimal_point[0]+0.1,window.optimal_point[1]+0.1,tt,c="pink")"""
             if window.triangle == []:
                 for n in window.neighbors:
                     neighborlines.append(ax.plot([window.optimal_point[0],n.optimal_point[0]],[window.optimal_point[1],n.optimal_point[1]],color="blue",))
@@ -296,15 +292,14 @@ def process_play(playpath_,playname,output_results):
     csv = pd.read_csv(playpath_)
     try:
         size,returner_pos,home,away,balls,lines,times,optimal_paths,optimal_path_points,windows,all_windows,optimal_points,play_direction,frechets,yardage_gained = process_frames(csv, True, True)
-        print(yardage_gained)
-        print(frechets)
         median_deviation = np.median(np.array(frechets))
-        print(median_deviation)
-        d = {'play':[playname],'yardage':[yardage_gained],'deviation':median_deviation}
+        mean_deviation = np.mean(np.array(frechets))
+        d = {'play':[playname],'yardage':[yardage_gained],'median_deviation':median_deviation,'mean_deviation':mean_deviation}
         df = pd.DataFrame(data=d)
         df.to_csv(output_results, mode='a', header=False)
+    #If the play crashes just output nothing
     except Exception as e:
-        d = {'play':[playname],'yardage':[None],'deviation':None}
+        d = {'play':[playname],'yardage':None,'median_deviation':None,'mean_deviation':None}
         df = pd.DataFrame(data=d)
         df.to_csv(output_results, mode='a', header=False)
     

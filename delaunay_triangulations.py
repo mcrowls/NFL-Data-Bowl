@@ -31,6 +31,8 @@ class Window:
         self.direction = direction
 
 def finding_five_yard(array):
+    if len(array) == 1:
+        return array
     starting_point = array[0]
     relevant_points = [array[0]]
     i = 1
@@ -77,10 +79,12 @@ def frechet_distance(actual_path, predicted_path):
         new_predicted_path.append(j)
     actual_path = finding_five_yard(actual_path)
     predicted_path = finding_five_yard(new_predicted_path)
-    actual_path[-1] = find_five_point(actual_path)
+    #actual_path[-1] = find_five_point(actual_path)
     predicted_path[-1] = find_five_point(predicted_path)
     actual_path = path_interpolate(actual_path, 50)
+    #plt.scatter(np.array(actual_path)[:,0],np.array(actual_path)[:,1])
     predicted_path = path_interpolate(predicted_path, 50)
+    #plt.scatter(np.array(predicted_path)[:,0],np.array(predicted_path)[:,1])
 
     #Sometimes the actual path isn't at least 5 yards long, so this just shortens the predicted path
     if (np.array(actual_path).shape[0] < np.array(predicted_path).shape[0]):
@@ -257,6 +261,8 @@ def create_window_neighbors(windows):
             #need to find the other windows in the same triangle as the current window
             #windows either have 2 or 4 neighbors
             if len(window.triangle) > 0:
+                if other_window.direction == "start":
+                    other_window.neighbors.append(window)
                 for triangle in window.triangle:
                     if triangle in other_window.triangle and other_window.optimal_point[0]<= window.optimal_point[0]:
                         window.neighbors.append(other_window)

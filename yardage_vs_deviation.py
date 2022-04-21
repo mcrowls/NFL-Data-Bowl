@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import random
 
-output_results = "results-after-distance-fix.csv"
+output_results = "results.csv"
 
 results = pd.read_csv(output_results)
 
@@ -21,19 +21,25 @@ def processing(play):
 def create_graph():
     df = pd.read_csv(output_results)
     df = df.dropna()
-    df = df.drop(df[df.yardage < 0].index)
+    #df = df.drop(df[df.yardage <= 0].index)
     
     yardage = df['yardage']
-    deviation = df['deviation']
-    r = np.corrcoef(yardage, deviation)
+    log_yardage = np.log10(yardage)
+    median_deviation = df['median_deviation']
+    mean_deviation = df['mean_deviation']
+    r = np.corrcoef(yardage, median_deviation)
     print(r)
-    plt.scatter(deviation,yardage)
+    plt.scatter(median_deviation,yardage)
+    m, b = np.polyfit(median_deviation, yardage, 1)
+    plt.plot(median_deviation, m*median_deviation+b,c="black")
+    plt.xlabel("Median Path Deviation")
+    plt.ylabel("Yardage")
     plt.show()
 
 def process_plays():
     #Change this number depending on how many cores you want to use for this
     pool = Pool()
-    pool.map(processing,random.sample(os.listdir(input_folderpath+"/receiving_plays"),50))
+    pool.map(processing,os.listdir(input_folderpath+"/receiving_plays"))
 
 
 if __name__ == '__main__':
