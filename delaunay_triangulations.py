@@ -513,11 +513,6 @@ def get_heuristic(current_node,neighbor,end,return_speed):
     neighbor.f = neighbor.g/neighbor.h
     return neighbor
 
-def get_heuristic2(current_node,neighbor,end,return_speed):
-    neighbor.g = (np.linalg.norm(neighbor.optimal_point - current_node.optimal_point)/return_speed)
-    neighbor.h = np.linalg.norm(neighbor.optimal_point[0] - end[0])
-    neighbor.f = neighbor.g+neighbor.h
-    return neighbor
 
 def reconstruct_path(current_node, end, start_window,carrier):
     the_path = []

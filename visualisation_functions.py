@@ -130,8 +130,7 @@ def process_frames(csv, delaunay=False, print_status=False):
 
     for player in np.unique(csv['displayName']):
         player_csv = csv[csv['displayName'] == player][receive_frame:]
-        #size = np.shape(player_csv)[0]
-        size = 20
+        size = np.shape(player_csv)[0]
         team = csv[csv['displayName'] == player]['team'].iloc[0]
         if team == attacking_team:
             attackers.append(Player(player, player_csv['x'], player_csv['y'], team, 0.6))
