@@ -10,9 +10,8 @@ import random
 
 output_results = "results.csv"
 
-results = pd.read_csv(output_results)
-
 def processing(play):
+    results = pd.read_csv(output_results)
     if play in results.values:
         return
     print(play)
@@ -38,15 +37,20 @@ def create_graph():
     plt.show()
 
 def process_plays():
-    #Change this number depending on how many cores you want to use for this
+    print(os.path.exists(output_results))
+    if not os.path.exists(output_results):
+        file = open(output_results,"w")
+        file.write("Id,play,yardage,median_deviation,mean_deviation\n")
+        file.close()
     pool = Pool()
     pool.map(processing,os.listdir(input_folderpath+"/receiving_plays"))
 
 
 if __name__ == '__main__':
 
-    #process_plays()
-    create_graph()
+    #Uncomment depending on what you want to run
+    process_plays()
+    #create_graph()
 
 
 

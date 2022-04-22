@@ -448,4 +448,4 @@ def visualise_play_FuncAnimation(play=playpath, outpath=visoutputpath, playname=
 
 #OLD visualise_delaunay_play(playpath)
 #visualise_play_FuncAnimation(playpath)
-visualise_play(playpath, changeFigsize=True)
+#visualise_play(playpath, changeFigsize=True)
