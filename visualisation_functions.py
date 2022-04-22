@@ -130,8 +130,8 @@ def process_frames(csv, delaunay=False, print_status=False):
 
     for player in np.unique(csv['displayName']):
         player_csv = csv[csv['displayName'] == player][receive_frame:]
-        size = np.shape(player_csv)[0]
-        #size = 1
+        #size = np.shape(player_csv)[0]
+        size = 20
         team = csv[csv['displayName'] == player]['team'].iloc[0]
         if team == attacking_team:
             attackers.append(Player(player, player_csv['x'], player_csv['y'], team, 0.6))
@@ -227,19 +227,19 @@ def animate_return(csv, delaunay=False, print_status=False, use_funcanim=False, 
 
     for frame in range(size):
         # PLOT EVERYTHING
-        optimal = ax.scatter(optimal_paths[frame][:,0],optimal_paths[frame][:,1],marker="*",c="pink",zorder=17)
+        #optimal = ax.scatter(optimal_paths[frame][:,0],optimal_paths[frame][:,1],marker="*",c="pink",zorder=17)
         
-        neighborlines = []
+        """neighborlines = []
         for window in all_windows[frame]:
             if window.triangle == []:
                 for n in window.neighbors:
-                    neighborlines.append(ax.plot([window.optimal_point[0],n.optimal_point[0]],[window.optimal_point[1],n.optimal_point[1]],color="blue",))
+                    neighborlines.append(ax.plot([window.optimal_point[0],n.optimal_point[0]],[window.optimal_point[1],n.optimal_point[1]],color="red",))
             else:
                 for n in window.neighbors:
-                    neighborlines.append(ax.plot([window.optimal_point[0],n.optimal_point[0]],[window.optimal_point[1],n.optimal_point[1]],color="orange"))
+                    neighborlines.append(ax.plot([window.optimal_point[0],n.optimal_point[0]],[window.optimal_point[1],n.optimal_point[1]],color="red"))"""
         
-        arrow, = ax.plot(optimal_paths[frame][:,0],optimal_paths[frame][:,1],c="black",zorder=15)
-        retur = ax.text(returner_pos[frame][0]-0.5, returner_pos[frame][1]-0.5, 'R', zorder=15, c="pink")
+        arrow, = ax.plot(optimal_paths[frame][:,0],optimal_paths[frame][:,1],c="green",zorder=15,linewidth=4.5)
+        #retur = ax.text(returner_pos[frame][0]-0.5, returner_pos[frame][1]-0.5, 'R', zorder=15, c="pink")
 
         returner_line, = ax.plot([returner_pos[frame][0], returner_pos[frame][0]], [0, 53.3], "--", zorder=6, c="black")
         returner_path, = ax.plot([returner_pos[frame][0], returner_pos[frame][0]], [0, 53.3], "-", zorder=5, c="gray", linewidth=5)
@@ -256,7 +256,6 @@ def animate_return(csv, delaunay=False, print_status=False, use_funcanim=False, 
         w = ax.scatter(np.array(optimal_points[frame])[:,0],np.array(optimal_points[frame])[:,1],c = "black",marker="x",zorder=16)
         if delaunay:
             p = ax.scatter(lines[frame][:, 0], lines[frame][:, 1], c=times[frame], cmap="YlOrRd", marker="s", s=5, zorder=15)
-            
         
         plt.savefig(f"visualisations/{playname}_frame{frame}.png", format="png")
         if frame < size - 1:
@@ -269,12 +268,12 @@ def animate_return(csv, delaunay=False, print_status=False, use_funcanim=False, 
             offensive.remove()
             defensive.remove()
             ball.remove()
-            retur.remove()
+            #retur.remove()
             w.remove()
             arrow.remove()
-            optimal.remove()
-            for n in neighborlines:
-                n[0].remove()
+            #optimal.remove()
+            #for n in neighborlines:
+                #n[0].remove()
 
     plt.savefig(f"visualisations/{playname[:len(playname) - 4]}.png", format="png")
     plt.show()
@@ -449,4 +448,4 @@ def visualise_play_FuncAnimation(play=playpath, outpath=visoutputpath, playname=
 
 #OLD visualise_delaunay_play(playpath)
 #visualise_play_FuncAnimation(playpath)
-#visualise_play(playpath, changeFigsize=True)
+visualise_play(playpath, changeFigsize=True)

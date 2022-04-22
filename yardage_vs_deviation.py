@@ -21,19 +21,20 @@ def processing(play):
 def create_graph():
     df = pd.read_csv(output_results)
     df = df.dropna()
-    #df = df.drop(df[df.yardage <= 0].index)
+    df = df.drop(df[df.yardage <= 0].index)
     
     yardage = df['yardage']
     log_yardage = np.log10(yardage)
     median_deviation = df['median_deviation']
     mean_deviation = df['mean_deviation']
-    r = np.corrcoef(yardage, median_deviation)
+    r = np.corrcoef(log_yardage, median_deviation)
     print(r)
-    plt.scatter(median_deviation,yardage)
+    plt.scatter(median_deviation,yardage,s=10)
     m, b = np.polyfit(median_deviation, yardage, 1)
     plt.plot(median_deviation, m*median_deviation+b,c="black")
+    plt.title("Plot showing median path deviation vs yards gained for each play")
     plt.xlabel("Median Path Deviation")
-    plt.ylabel("Yardage")
+    plt.ylabel("Yards gained")
     plt.show()
 
 def process_plays():
@@ -44,8 +45,8 @@ def process_plays():
 
 if __name__ == '__main__':
 
-    process_plays()
-    #create_graph()
+    #process_plays()
+    create_graph()
 
 
 
