@@ -472,11 +472,11 @@ def main(argv):
                 raise ValueError("Error: --visfunc must be 'new', 'old' or 'funcanim'")
     create_new_folder(outpath)
     if vis_func == "new":
-        visualise_play_FuncAnimation(inpath+play, outpath, play, inpath)
+        visualise_play_FuncAnimation(inpath+play+".csv", outpath, play, inpath)
     elif vis_func == "old":
-        visualise_play_delaunay(inpath+play, outpath, play)
+        visualise_play_delaunay(inpath+play+".csv", outpath, play)
     elif vis_func == "funcanim":
-        visualise_play(inpath+play, outpath=outpath, playname=play, changeFigsize=True)
+        visualise_play(inpath+play+".csv", outpath=outpath, playname=play, changeFigsize=True)
     else:
         raise ValueError("Error: visfunc must be 'new', 'old' or 'funcanim'")
 

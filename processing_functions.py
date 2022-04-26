@@ -14,13 +14,6 @@ from functools import partial
 """
 Utils for RAM usage, CPU usage, Multithreading
 """
-def start_log(filename):
-    old_stdout = sys.stdout
-    log_file = open(f"{filename}.log","w")
-    sys.stdout = log_file  
-    sys.stdout = old_stdout
-    log_file.close()
-
 def memory_limit(percentage=0.8):
     soft, hard = resource.getrlimit(resource.RLIMIT_AS)
     resource.setrlimit(resource.RLIMIT_AS, (get_memory() * 1024 *percentage, hard))
@@ -71,18 +64,19 @@ def process_all_plays(inpath=inputpath+"/receiving_plays", outpath="results/resu
     pool.map(partial(process_play_lam, filename="results_plays", inpath=inpath), os.listdir(inpath))
 
 def main(argv):
+    log = False
     process_all = False
     play = play_folderpath[:-4]
-    inputpath = inputpath+"/receiving_plays"
+    inpath = inputpath+"/receiving_plays"
     outputpath = 'results'
     try:
-        opts, args = getopt.getopt(argv,"hap:o:i:",["help","all","playid=","outpath=","inpath="])
+        opts, args = getopt.getopt(argv,"hap:o:i:l",["help","all","playid=","outpath=","inpath=","log"])
     except getopt.GetoptError:
-        print('processing_functions.py [-a | -p <play_id>] -i <input_path> -o <output_path>')
+        print('processing_functions.py [-a | -p <play_id>] -i <input_path> -o <output_path> -l')
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
-            print('processing_functions.py [-a | -p <play_id>] -i <input_path> -o <output_path>')
+            print('processing_functions.py [-a | -p <play_id>] -i <input_path> -o <output_path> -l')
             sys.exit()
         elif opt in ("-a", "--all"):
             if opt in ("-p", "--playid"):
@@ -95,13 +89,16 @@ def main(argv):
         elif opt in ("-o", "--outpath"):
             outputpath = arg
         elif opt in ("-i", "--inpath"):
-            inputpath = arg
+            inpath = arg
+        elif opt in ("-l", "--log"):
+            log = True
     create_new_folder(outputpath)
     if process_all:
-        process_all_plays(inputpath, outputpath+"/results_plays.csv")
+        process_all_plays(inpath, outputpath+"/results_plays.csv")
     else:
-        process_play(inputpath+"/"+play, play, outputpath, f"result_{play}")
+        process_play(inpath+"/"+play+".csv", play, outputpath, f"result_{play}")
 
 if __name__ == '__main__':
+    get_memory(0.8)
     main(sys.argv[1:])
     
