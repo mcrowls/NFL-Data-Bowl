@@ -125,6 +125,7 @@ def returner(csv, frame):
 def get_points_of_defenders(defenders, index):
     return [defender.getxyloc(index) for defender in defenders]
 
+
 def get_lines_from_delaunay(triangles,defenders,frame):
     #Splitting the delaunay triangles into their sides
     index_pairs = []
@@ -170,26 +171,24 @@ def get_lines_from_delaunay(triangles,defenders,frame):
     return np.reshape(points,(-1,2)), windows
 
 def get_lines_from_sidelines(top,left,right,returner_pos):
-    
     points = []
     windows = []
     for t in top:
-        line = np.linspace(t,[returner_pos[0],t[1]],22,endpoint=True)[1:]
+        line = np.linspace(t,[returner_pos[0],t[1]],22,endpoint=False)[1:]
         points.append(line)
-        windows.append(Window(line,0,[0,0],start=t,end=line[-1],direction="t"))
+        windows.append(Window(line,0,[0,0],start=t))
 
     for l in left:
         line = np.linspace(l,[l[0], 53.3],22,endpoint=False)[1:]
         points.append(line)
-        windows.append(Window(line,0,[0,0],start=l,end=line[-1],direction="l"))
+        windows.append(Window(line,0,[0,0],start=l))
 
     for r in right:
         line = np.linspace(r,[r[0], 0 ],22,endpoint=False)[1:]
         points.append(line)
-        windows.append(Window(line,0,[0,0],start=r,end=line[-1],direction="r"))
+        windows.append(Window(line,0,[0,0],start=r))
 
     points = np.array(points)
-
     return np.reshape(points,(-1,2)), windows
 
 #calculating the arrival time of each defender to each point in the window, but only keeping the min time
@@ -250,7 +249,7 @@ def find_lowest_f_node(nodes):
             f = node.f
             n = node
     return n
-
+  
 def create_window_neighbors(windows):
     for window in windows:
         for other_window in windows:
@@ -266,7 +265,7 @@ def create_window_neighbors(windows):
                 for triangle in window.triangle:
                     if triangle in other_window.triangle and other_window.optimal_point[0]<= window.optimal_point[0]:
                         window.neighbors.append(other_window)
-                
+                        
                 #giving delaunay windows sideline neighbors
                 #if the delaunay window has the same start point as the sideline window, they should be neighbors
                 #! But this causes problems because it causes some window neighbors to have other windows in between them
@@ -274,7 +273,6 @@ def create_window_neighbors(windows):
                 if len(other_window.triangle) == 0 and len(window.triangle) ==  1:
                     if other_window.optimal_point[0]<= window.optimal_point[0]:
                         window.neighbors.append(other_window)
-
             #this is to give sideline windows any neighbors
             else:
                 #matching sidelines to delaunay windows
@@ -512,7 +510,6 @@ def get_heuristic(current_node,neighbor,end,return_speed):
     neighbor.h = np.linalg.norm(neighbor.optimal_point[0] - end[0])
     neighbor.f = neighbor.g/neighbor.h
     return neighbor
-
 
 def reconstruct_path(current_node, end, start_window,carrier):
     the_path = []
