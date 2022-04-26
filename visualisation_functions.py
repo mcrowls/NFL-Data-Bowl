@@ -152,13 +152,19 @@ def process_frames(csv, delaunay=False, print_status=False):
     times = []
     optimal_points = []
     optimal_paths = []
+    bound_points_x =[]
+    bound_points_y = []
+    outer_layer_x = []
+    outer_layer_y = []
     top_windows = []
     right_windows = []
     left_windows = []
     optimal_paths = []
+    start_time = time.time()
     all_windows = []
     frechets = []
     start_time = time.time()
+    
     # Get data before for smooth animation
 
     yardage_gained = returner_pos[0][0] - returner_pos[-1][0]
@@ -198,14 +204,14 @@ def process_frames(csv, delaunay=False, print_status=False):
 
             #frechetDistance = frechetDistance * 5 /
             frechets.append(frechetDistance)
-
         optimal_paths.append(np.reshape(optimal_path_points,(-1,2)))
         o = []
         l = []
         for w in windows:
             o.append(w.optimal_point)
             l.append(w.points)
-
+            
+            
         l = np.array(l)
         lines.append(np.reshape(l,(-1,2)))
         optimal_points.append(o)
@@ -213,6 +219,7 @@ def process_frames(csv, delaunay=False, print_status=False):
         print("Processed frame", frame+1, "/",size,"||",round(((frame+1)/size)*100),"%")
 
     end_time = time.time()
+    print("Took",round(end_time-start_time,2),"s to process",size,"frames")
     if print_status:
         print("Took",round(end_time-start_time,2),"s to process",size,"frames")
     return size, returner_pos, points_def, points_off, balls, lines, times, optimal_paths, optimal_path_points, windows, all_windows, optimal_points, play_direction,frechets,yardage_gained
@@ -249,13 +256,15 @@ def animate_return(csv, delaunay=False, print_status=False, use_funcanim=False, 
         offensive, = ax.plot(away[frame][:, 0], away[frame][:, 1], 'o', markersize=10, markerfacecolor="b",
                             markeredgewidth=1, markeredgecolor="white",
                             zorder=5, label='Attackers')
-        ball, = ax.plot(balls[frame][0], balls[frame][1], 'o', markersize=8, markerfacecolor="black", markeredgewidth=1, markeredgecolor="white",
-                zorder=10)
-
+        ball, = ax.plot(balls[frame][0], balls[frame][1], 'o', markersize=8, markerfacecolor="black", markeredgewidth=1, markeredgecolor="white", zorder=10)
         w = ax.scatter(np.array(optimal_points[frame])[:,0],np.array(optimal_points[frame])[:,1],c = "black",marker="x",zorder=16)
         if delaunay:
+            top_points = []
+            left_points = []
+            right_points = []
+            #The heatmap of the arrival times on all the windows
             p = ax.scatter(lines[frame][:, 0], lines[frame][:, 1], c=times[frame], cmap="YlOrRd", marker="s", s=5, zorder=15)
-        
+          
         plt.savefig(f"visualisations/{playname}_frame{frame}.png", format="png")
         if frame < size - 1:
             plt.pause(0.20)
