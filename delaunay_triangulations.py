@@ -174,19 +174,19 @@ def get_lines_from_sidelines(top,left,right,returner_pos):
     points = []
     windows = []
     for t in top:
-        line = np.linspace(t,[returner_pos[0],t[1]],22,endpoint=False)[1:]
+        line = np.linspace(t,[returner_pos[0],t[1]],22,endpoint=True)[1:]
         points.append(line)
-        windows.append(Window(line,0,[0,0],start=t))
+        windows.append(Window(line,0,[0,0],start=t,end=line[-1],direction="t"))
 
     for l in left:
         line = np.linspace(l,[l[0], 53.3],22,endpoint=False)[1:]
         points.append(line)
-        windows.append(Window(line,0,[0,0],start=l))
+        windows.append(Window(line,0,[0,0],start=l,end=line[-1],direction="l"))
 
     for r in right:
         line = np.linspace(r,[r[0], 0 ],22,endpoint=False)[1:]
         points.append(line)
-        windows.append(Window(line,0,[0,0],start=r))
+        windows.append(Window(line,0,[0,0],start=r,end=line[-1],direction="r"))
 
     points = np.array(points)
     return np.reshape(points,(-1,2)), windows
