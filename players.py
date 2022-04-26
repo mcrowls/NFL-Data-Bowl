@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from helpers import inputpath
+from helpers import inputpath, avg_player_speed
 
 
 class Player:
@@ -9,7 +9,14 @@ class Player:
         self.xs = xs
         self.ys = ys
         self.team = team
-        self.speed = speed
+        try:
+            csv = pd.read_csv(inputpath+'player_speeds.csv')
+            player = csv[csv['Name'] == self.name]
+            speed = player['Speed'][0]
+            self.speed = speed
+        except:
+            self.speed = avg_player_speed
+        
 
     def getxyloc(self, i):
         x = self.xs.iloc[i]
@@ -18,10 +25,20 @@ class Player:
     
     def get_speed(self):
         csv = pd.read_csv(inputpath+'player_speeds.csv')
-        player = csv[csv['Name'] == self.name]
+        try:
+            player = csv[csv['Name'] == self.name]
+            speed = player['Speed'][0]
+            return speed
+        except:
+            speed = avg_player_speed
+            return speed
+    
+def get_player_speed(playername):
+    csv = pd.read_csv(inputpath+'player_speeds.csv')
+    #TODO FUZZY MATCHING
+    try:
+        player = csv[csv['Name'] == playername]
         speed = player['Speed'][0]
         return speed
-    
-def get_player_speeds(foldername):
-    csv = pd.read_csv(inputpath+'player_speeds.csv')
-    return csv
+    except:
+        return avg_player_speed
