@@ -14,11 +14,14 @@ Punt Returner's path, the method used to calculate this, and how it can be optim
 ### And the following scripts, with the options commented above
 
 ```py
-# --all: processes all punt returns (plays)  OR --playid: id of the play to process (e.g. play2365-game2020110108)
-# --inpath: path to the folder containing the play csv's   --outpath: path to store the results (/results or /visualisations)
+# --all: processes all punt returns (plays)  
+# OR --playid: id of the play to process (e.g. play2365-game2020110108)
+# --inpath: path to the folder containing the play csv's   
+# --outpath: path to store the results (/results or /visualisations)
 processing_functions.py [-a | -p <play_id>] -i <input_path> -o <output_path>
-# --all: processes all punt returns (plays)   --playid: id of the play to process (e.g. play2365-game2020110108)
-# --inpath: path to the folder containing the play csv's   --outpath: path to store the results (/results or /visualisations)
+# --playid: id of the play to process (e.g. play2365-game2020110108)
+# --inpath: path to the folder containing the play csv's   
+# --outpath: path to store the results (/results or /visualisations)
 # --visfunc: function to use to create the play visualisation; new/old/funcanim
 visualisation_functions.py -p <play_id> -i <input_path> -o <output_path> -v <"new"/"old"/"funcanim">
 ```
