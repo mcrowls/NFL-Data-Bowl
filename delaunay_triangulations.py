@@ -316,10 +316,10 @@ def create_window_neighbors(windows):
         if next.optimal_point[0] > top.optimal_point[0]:
             top.neighbors.append(next)
 
-    if tops[0].optimal_point[0] < tops[1].optimal_point[0]:
+    if len(tops) > 1 and tops[0].optimal_point[0] < tops[1].optimal_point[0]:
         tops[0].neighbors.append(tops[1])
 
-    if tops[-1].optimal_point[0] < tops[-2].optimal_point[0]:   
+    if len(tops) > 1 and tops[-1].optimal_point[0] < tops[-2].optimal_point[0]:   
         tops[-1].neighbors.append(tops[-2])
 
     for left in lefts[1:len(lefts)-1]:
@@ -337,10 +337,12 @@ def create_window_neighbors(windows):
         rights[0].neighbors.append(rights[1])
 
     #the first top sideline window should be connected to the nearest left sideline window
-    tops[0].neighbors.append(lefts[0])
+    if len(tops) > 1 and len(lefts) > 1:
+        tops[0].neighbors.append(lefts[0])
 
     #the last top sideline window should be connected to the nearest right sideline window
-    tops[-1].neighbors.append(rights[0])
+    if len(tops) > 1 and len(rights) > 1:
+        tops[-1].neighbors.append(rights[0])
 
     #Now check for bad neighbors
     windows = check_window_neighbors(windows)
@@ -487,7 +489,10 @@ def boundary_windows(hull_points, returner_pos_x):
 
     left_window = [points_after_returner[ind_left], points_after_returner[ind_bottom]]
     right_window = [points_after_returner[ind_right] ,points_after_returner[ind_bottom]]
-    top_window = [points_after_returner[ind_top[0]], points_after_returner[ind_top[1]]]
+    if (len(ind_top) == 1):
+        top_window = [points_after_returner[ind_top[0]]]
+    else:
+        top_window = [points_after_returner[ind_top[0]], points_after_returner[ind_top[1]]]
 
     for i in range(0, len(points_x)):
         if points_x[i] > x_lim:

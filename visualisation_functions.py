@@ -176,6 +176,12 @@ def process_frames(csv, delaunay=False, print_status=False):
             yardage_gained = returner_pos[0][0] - returner_pos[frame][0]
             size = frame + 1
             break
+        if returner_pos[frame][0] <= 10:
+            print("TOUCHDOWN! Stopping calculations")
+            yardage_gained = returner_pos[0][0] - returner_pos[frame][0]
+            size = frame + 1
+            break
+
         points_def.append(np.array(get_points_of_defenders(defenders, frame)))
         points_off.append(np.array(get_points_of_defenders(attackers, frame)))
         if delaunay:
