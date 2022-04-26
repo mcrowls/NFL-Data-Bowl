@@ -448,7 +448,7 @@ def check_window_neighbors(windows):
     return windows
 
 
-def pointInRect(point,rect):
+def point_in_rect(point,rect):
     x1, y1, w, h = rect
     x2, y2 = x1+w, y1+h
     x, y = point
