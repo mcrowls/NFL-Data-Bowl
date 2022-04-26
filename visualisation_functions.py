@@ -196,7 +196,6 @@ def process_frames(csv, delaunay=False, print_status=False):
 
         if abs(returner_pos[frame][0] - returner_pos[-1][0]) > 1:
             frechetDistance = frechet_distance(np.array(returner_pos[frame:]).reshape(-1,2),optimal_path_points)
-
             #frechetDistance = frechetDistance * 5 /
             frechets.append(frechetDistance)
 
