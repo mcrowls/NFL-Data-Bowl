@@ -598,7 +598,7 @@ def get_defensive_locations(playpath_):
         size = np.shape(player_csv)[0]
         team = csv[csv['displayName'] == player]['team'].iloc[0]
         if team == attacking_team:
-            attackers.append(Player(player, player_csv['x'], player_csv['y'], team, 0.6))
+            attackers.append(Player(player, player_csv['x'], player_csv['y'], team))
         else:
-            defenders.append(Player(player, player_csv['x'], player_csv['y'], team, 0.6))
+            defenders.append(Player(player, player_csv['x'], player_csv['y'], team))
     return attackers, defenders

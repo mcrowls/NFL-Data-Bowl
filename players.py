@@ -4,7 +4,7 @@ from helpers import inputpath, avg_player_speed
 
 
 class Player:
-    def __init__(self, name, xs, ys, team, speed):
+    def __init__(self, name, xs, ys, team, speed=None):
         self.name = name
         self.xs = xs
         self.ys = ys
@@ -16,7 +16,8 @@ class Player:
             self.speed = speed
         except:
             self.speed = avg_player_speed
-        
+        if speed is not None:
+            self.speed = speed
 
     def getxyloc(self, i):
         x = self.xs.iloc[i]

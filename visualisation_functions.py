@@ -134,9 +134,9 @@ def process_frames(csv, delaunay=False, print_status=False):
         size = np.shape(player_csv)[0]
         team = csv[csv['displayName'] == player]['team'].iloc[0]
         if team == attacking_team:
-            attackers.append(Player(player, player_csv['x'], player_csv['y'], team, 0.6))
+            attackers.append(Player(player, player_csv['x'], player_csv['y'], team))
         elif team != "football":
-            defenders.append(Player(player, player_csv['x'], player_csv['y'], team, 0.6))
+            defenders.append(Player(player, player_csv['x'], player_csv['y'], team))
 
     returner_pos = csv[csv['displayName'] == punt_returner][receive_frame:]
     returner_pos = list(zip(returner_pos.x.tolist(), returner_pos.y.tolist()))
@@ -384,22 +384,44 @@ def visualise_play(inpath=inputpath+"receiving_plays/", outpath=visoutputpath, p
 # Draw the delaunay triangles frame by frame
 def visualise_play_delaunay(inpath=inputpath+"receiving_plays/", outpath=visoutputpath, playname=play_filename[:-4], size=40):
     create_new_folder(outpath)
+    csv = pd.read_csv(inpath+playname+".csv")
+    receive_frame = csv[csv['event'] == 'punt_received']['frameId'].iloc[0]
+    punt_returner = returner(csv, receive_frame)
+    returner_pos = csv[csv['displayName'] == punt_returner][receive_frame:]
+    returner_pos = list(zip(returner_pos.x.tolist(), returner_pos.y.tolist()))
     fig, ax = plt.subplots()
+    times = []
+    lines=[]
+    attacking_team = csv[csv['displayName'] == punt_returner]['team'].iloc[0]
+    attackers = []
+    defenders = []
+    for player in np.unique(csv['displayName']):
+        player_csv = csv[csv['displayName'] == player][receive_frame:]
+        size = np.shape(player_csv)[0]
+        team = csv[csv['displayName'] == player]['team'].iloc[0]
+        if team == attacking_team:
+            attackers.append(Player(player, player_csv['x'], player_csv['y'], team))
+        elif team != "football":
+            defenders.append(Player(player, player_csv['x'], player_csv['y'], team))
+
     for frame in range(size):
-        attackers, defenders = get_defensive_locations(inpath+playname+".csv")
         points_def = np.array(get_points_of_defenders(defenders, frame))
         arrival_points = None
         points_off = np.array(get_points_of_defenders(attackers, frame))
         tri = Delaunay(points_def)
-        lines = get_lines_from_delaunay(tri,points_def)
-        times = get_arrival_times(lines,points_def,points_off)
-        
+        bounds = ConvexHull(points_def).vertices
+        top, right, left = boundary_windows(points_def[bounds], returner_pos[frame][0])
+        play_direction = csv["playDirection"].iloc[0]
+        tri = Delaunay(points_def)
+        _, windows = get_lines_from_delaunay(tri,defenders,frame)
+        _,side_windows = get_lines_from_sidelines(top,left,right,returner_pos[frame])
+        arrival_time, windows = get_arrival_times(windows,side_windows,defenders,attackers,frame,returner_pos[frame])
+        times.append(arrival_time)
         plt.triplot(points_def[:,0], points_def[:,1], tri.simplices)
         plt.plot(points_def[:,0], points_def[:,1], 'o', c='r',label='Defenders')
         plt.plot(points_off[:,0], points_off[:,1], 'o', c='b', label='Attackers')
-        p = plt.scatter(lines[:,0],lines[:,1],c=times, cmap = "RdYlGn",marker="s",s=5)
-        cbar = fig.colorbar(p)
-        cbar.set_label("Expected defender arrival time (s)")
+        #cbar = fig.colorbar(p)
+        #cbar.set_label("Expected defender arrival time (s)")
         plt.legend(loc='best')
         plt.xlim([0, 120])
         plt.ylim([0, 53.3])
