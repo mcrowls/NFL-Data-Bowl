@@ -470,13 +470,13 @@ def main(argv):
     inpath = inputpath+"receiving_plays/"
     outpath = 'visualisations/'
     try:
-        opts, args = getopt.getopt(argv,"hp:o:i:v:t",["help","playid=","outpath=","inpath=","visfunc=","astar_old"])
+        opts, args = getopt.getopt(argv,"hp:o:i:v:q",["help","playid=","outpath=","inpath=","visfunc=","astar_old"])
     except getopt.GetoptError:
-        print('visualisation_functions.py -p <play_id> -i <input_path> -o <output_path> -v <"new"/"old"/"funcanim"> -a')
+        print('visualisation_functions.py -p <play_id> -i <input_path> -o <output_path> -v <"new"/"old"/"funcanim"> -q')
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
-            print('visualisation_functions.py -p <play_id> -i <input_path> -o <output_path> -v <"new"/"old"/"funcanim"> -a')
+            print('visualisation_functions.py -p <play_id> -i <input_path> -o <output_path> -v <"new"/"old"/"funcanim"> -q')
             sys.exit()
         elif opt in ("-p", "--playid"):
             play = arg
@@ -484,7 +484,7 @@ def main(argv):
             outpath = arg
         elif opt in ("-i", "--inpath"):
             inpath = arg
-        elif opt in ("-t", "--astar_old"):
+        elif opt in ("-q", "--astar_old"):
             oastar = True
         elif opt in ("-v", "--visfunc"):
             if arg == "new" or arg == "old" or arg == "funcanim":

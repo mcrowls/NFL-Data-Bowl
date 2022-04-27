@@ -82,20 +82,20 @@ def process_all_plays(inpath=inputpath+"/receiving_plays", outpath="results/", h
             process_play_lam(p, inpath=inpath+"/", filename="results_plays", outpath=outpath, heuristic=heuristic, old_astar=old_astar)
 
 def main(argv):
-    log = False
+    logpath = None
     oastar = False
     process_all = False
     play = play_filename[:-4]
     inpath = inputpath+"/receiving_plays"
     outputpath = 'results'
     try:
-        opts, args = getopt.getopt(argv,"hap:o:i:lm:t",["help","all","playid=","outpath=","inpath=","log","mem=","astar_old"])
+        opts, args = getopt.getopt(argv,"hap:o:i:l:m:q",["help","all","playid=","outpath=","inpath=","logpath=","mem=","astar_old"])
     except getopt.GetoptError:
-        print('processing_functions.py [-a | -p <play_id>] -i <input_path> -o <output_path> -l -m <percentage_of_mem_usage_allowed> -t')
+        print('processing_functions.py [-a | -p <play_id>] -i <input_path> -o <output_path> -l <logfile_full_filepath> -m <percentage_of_mem_usage_allowed> -q')
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
-            print('processing_functions.py [-a | -p <play_id>] -i <input_path> -o <output_path> -l -m <percentage_of_mem_usage_allowed> -t')
+            print('processing_functions.py [-a | -p <play_id>] -i <input_path> -o <output_path> -l <logfile_full_filepath> -m <percentage_of_mem_usage_allowed> -q')
             sys.exit()
         elif opt in ("-a", "--all"):
             if opt in ("-p", "--playid"):
@@ -109,21 +109,30 @@ def main(argv):
             outputpath = arg
         elif opt in ("-i", "--inpath"):
             inpath = arg
-        elif opt in ("-l", "--log"):
-            log = True
+        elif opt in ("-l", "--logpath"):
+            logpath = arg
         elif opt in ("-m", "--mem"):
             get_memory(arg)
-        elif opt in ("-t", "--astar_old"):
+        elif opt in ("-q", "--astar_old"):
             oastar = True
-    if log:
-        print("Printing to logfile")
+    if logpath is not None:
+        old_stdout = sys.stdout
+        if logpath.endswith(".log"):
+            print(f"Printing to logfile: {logpath}")
+            log_file = open(logpath,"w")
+        else:
+            print(f"Printing to logfile: {logpath+'.log'}")
+            log_file = open(logpath+".log","w")
+        sys.stdout = log_file
     create_new_folder(outputpath)
     if process_all:
         process_all_plays(inpath, outputpath+"/", heuristic=heuristic_func, old_astar=oastar)
     else:
         process_play(inpath+"/"+play+".csv", play, outputpath, f"result_{play}", heuristic=heuristic_func, old_astar=oastar)
-    if log:
+    if logpath is not None:
         print("Stopped printing to logfile")
+        sys.stdout = old_stdout
+        log_file.close()
 
 if __name__ == '__main__':
     main(sys.argv[1:])
