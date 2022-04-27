@@ -5,7 +5,7 @@ import os
 """## Edit These"""
 input_folderpath = "data"
 output_folderpath = "data"
-play_folderpath = 'play2365-game2020110108.csv'
+play_filename = 'play2365-game2020110108.csv'
 vis_output_folderpath = "visualisations"
 results_output_folderpath = "results"
 drive_folderpath = "Colab Notebooks"
@@ -21,7 +21,7 @@ inputpath = drivepath+input_folderpath+"/" if useDrive else input_folderpath+"/"
 outputpath = drivepath+output_folderpath+"/" if useDrive else output_folderpath+"/"
 visoutputpath = drivepath+vis_output_folderpath+"/" if useDrive else vis_output_folderpath+"/"
 resultsoutputpath = drivepath+results_output_folderpath+"/" if useDrive else results_output_folderpath+"/"
-playpath = inputpath+"receiving_plays/"+play_folderpath
+playpath = inputpath+"receiving_plays/"+play_filename
 #drivepath = 'drive\\MyDrive\\'+drive_folderpath+"\\"
 #inputpath = drivepath+input_folderpath+"\\" if useDrive else input_folderpath+"\\"
 #outputpath = drivepath+output_folderpath+"\\" if useDrive else output_folderpath+"\\"

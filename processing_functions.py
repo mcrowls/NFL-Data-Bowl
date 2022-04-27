@@ -7,7 +7,7 @@ import random
 import sys
 import resource
 from visualisation_functions import process_frames
-from helpers import num_threads, play_folderpath
+from helpers import num_threads, play_filename
 import sys, getopt
 from functools import partial
 
@@ -66,7 +66,7 @@ def process_all_plays(inpath=inputpath+"/receiving_plays", outpath="results/resu
 def main(argv):
     log = False
     process_all = False
-    play = play_folderpath[:-4]
+    play = play_filename[:-4]
     inpath = inputpath+"/receiving_plays"
     outputpath = 'results'
     try:

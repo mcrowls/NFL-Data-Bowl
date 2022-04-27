@@ -26,7 +26,7 @@ processing_functions.py [-a | -p <play_id>] -i <input_path> -o <output_path>
 visualisation_functions.py -p <play_id> -i <input_path> -o <output_path> -v <"new"/"old"/"funcanim">
 ```
 
-There are also the following dependancies:
+There are also the following commands which setup the environment (dependencies, notebook options):
 
 ```py
 pip install -U tk

@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 import statistics
 from scipy.spatial import Delaunay, ConvexHull, convex_hull_plot_2d
-from helpers import get_play_description_from_number, inputpath, playpath, visoutputpath, play_folderpath, create_new_folder
+from helpers import get_play_description_from_number, inputpath, playpath, visoutputpath, play_filename, create_new_folder
 import time
 from matplotlib import animation
 from IPython.display import HTML
@@ -217,7 +217,7 @@ def process_frames(csv, delaunay=False, print_status=False):
         print("Took",round(end_time-start_time,2),"s to process",size,"frames")
     return size, returner_pos, points_def, points_off, balls, lines, times, optimal_paths, optimal_path_points, windows, all_windows, optimal_points, play_direction,frechets,yardage_gained
 
-def animate_return(csv, delaunay=False, print_status=False, use_funcanim=False, outpath=visoutputpath, playname=play_folderpath):
+def animate_return(csv, delaunay=False, print_status=False, use_funcanim=False, outpath=visoutputpath, playname=play_filename):
     fig, ax = draw_pitch(100, 53.3)
     anim_values = []
     size,returner_pos,home,away,balls,lines,times,optimal_paths,optimal_path_points,windows,all_windows,optimal_points,play_direction,frechets,yardage_gained = process_frames(csv, delaunay, print_status)
@@ -274,7 +274,7 @@ def animate_return(csv, delaunay=False, print_status=False, use_funcanim=False, 
     plt.savefig(f"visualisations/{playname[:len(playname) - 4]}.png", format="png")
     plt.show()
 
-def animate_one_play(home, away, balls, return_line, lines,times, play_direction, outpath=visoutputpath, playname=play_folderpath):
+def animate_one_play(home, away, balls, return_line, lines,times, play_direction, outpath=visoutputpath, playname=play_filename):
     fig, ax = draw_pitch(100, 53.3)
     team_left, = ax.plot([], [], 'o', markersize=12, markerfacecolor="r", markeredgewidth=1, markeredgecolor="white", zorder=7)
     team_right, = ax.plot([], [], 'o', markersize=12, markerfacecolor="b", markeredgewidth=1, markeredgecolor="white", zorder=7)
@@ -375,18 +375,18 @@ def animate_one_play(home, away, balls, return_line, lines,times, play_direction
 
 
 
-def visualise_play(playpath_, changeFigsize=False, outpath=visoutputpath, playname=play_folderpath[:-4]):
+def visualise_play(inpath=inputpath+"receiving_plays/", outpath=visoutputpath, playname=play_filename[:-4], changeFigsize=False):
     if changeFigsize:
         plt.rcParams['figure.figsize'] = [18, 10]
-    csv = pd.read_csv(playpath_)
+    csv = pd.read_csv(inpath+playname+".csv")
     animate_return(csv, delaunay=True, outpath=outpath, playname=playname)
 
 # Draw the delaunay triangles frame by frame
-def visualise_play_delaunay(playpath_, outpath=visoutputpath, playname=play_folderpath[:-4], size=40):
+def visualise_play_delaunay(inpath=inputpath+"receiving_plays/", outpath=visoutputpath, playname=play_filename[:-4], size=40):
     create_new_folder(outpath)
     fig, ax = plt.subplots()
     for frame in range(size):
-        attackers, defenders = get_defensive_locations(playpath_)
+        attackers, defenders = get_defensive_locations(inpath+playname+".csv")
         points_def = np.array(get_points_of_defenders(defenders, frame))
         arrival_points = None
         points_off = np.array(get_points_of_defenders(attackers, frame))
@@ -412,17 +412,14 @@ def visualise_play_delaunay(playpath_, outpath=visoutputpath, playname=play_fold
             fig.clear()
     plt.show()
 
-def visualise_play_FuncAnimation(play=playpath, outpath=visoutputpath, playname=play_folderpath[:-4], inpath=inputpath+"receiving_plays/"):
+def visualise_play_FuncAnimation(inpath=inputpath+"receiving_plays/", outpath=visoutputpath, playname=play_filename[:-4]):
     create_new_folder(outpath)
     plt.rcParams['figure.figsize'] = [18, 10]
     anim_values = []
-    if play == playpath:
-        csv = pd.read_csv(playpath)
-    else:
-        csv = pd.read_csv(inpath+play)
-    size,returner_pos,home,away,balls,lines,times,ox,oy,optimal_path,optimal_path_points,windows,optimal_points,play_direction = process_frames(csv, delaunay=True)
-    anim_values.extend([returner_pos, home,away,balls,lines,times,ox,oy, play_direction])
-    animate_one_play(anim_values[1],anim_values[2],anim_values[3],anim_values[0],anim_values[4],anim_values[5], anim_values[8], outpath, playname+".csv")
+    csv = pd.read_csv(inpath+playname+".csv")
+    size,returner_pos,home,away,balls,lines,times,optimal_paths,optimal_path_points,windows,all_windows,optimal_points,play_direction,frechets,yardage_gained = process_frames(csv, delaunay=True)
+    anim_values.extend([returner_pos, home,away,balls,lines,times,play_direction])
+    animate_one_play(anim_values[1],anim_values[2],anim_values[3],anim_values[0],anim_values[4],anim_values[5], anim_values[6], outpath, playname+".csv")
 
 def create_graph(output_results):
     df = pd.read_csv(output_results)
@@ -446,9 +443,9 @@ def create_graph(output_results):
 def main(argv):
     # "funcanim" "new" "old"
     vis_func = "new"
-    play = play_folderpath[:-4]
+    play = play_filename[:-4]
     inpath = inputpath+"receiving_plays/"
-    outpath = 'visualisations'
+    outpath = 'visualisations/'
     try:
         opts, args = getopt.getopt(argv,"hp:o:i:v:",["help","playid=","outpath=","inpath=","visfunc="])
     except getopt.GetoptError:
@@ -469,13 +466,14 @@ def main(argv):
                 vis_func = arg
             else:
                 raise ValueError("Error: --visfunc must be 'new', 'old' or 'funcanim'")
-    create_new_folder(outpath)
+    create_new_folder(outpath[:-1])
     if vis_func == "new":
-        visualise_play_FuncAnimation(inpath+play+".csv", outpath, play, inpath)
+        #play=play_filename, outpath=visoutputpath, playname=play_filename[:-4], inpath=inputpath+"receiving_plays/"):
+        visualise_play_FuncAnimation(inpath, outpath, play)
     elif vis_func == "old":
-        visualise_play_delaunay(inpath+play+".csv", outpath, play)
+        visualise_play_delaunay(inpath, outpath, play)
     elif vis_func == "funcanim":
-        visualise_play(inpath+play+".csv", outpath=outpath, playname=play, changeFigsize=True)
+        visualise_play(inpath, outpath, play, changeFigsize=True)
     else:
         raise ValueError("Error: visfunc must be 'new', 'old' or 'funcanim'")
 
