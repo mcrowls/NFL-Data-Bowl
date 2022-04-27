@@ -174,19 +174,19 @@ def get_lines_from_sidelines(top,left,right,returner_pos):
     points = []
     windows = []
     for t in top:
-        line = np.linspace(t,[returner_pos[0],t[1]],22,endpoint=False)[1:]
+        line = np.linspace(t,[returner_pos[0],t[1]],22,endpoint=True)[1:]
         points.append(line)
-        windows.append(Window(line,0,[0,0],start=t))
+        windows.append(Window(line,0,[0,0],start=t,end=line[-1],direction="t"))
 
     for l in left:
         line = np.linspace(l,[l[0], 53.3],22,endpoint=False)[1:]
         points.append(line)
-        windows.append(Window(line,0,[0,0],start=l))
+        windows.append(Window(line,0,[0,0],start=l,end=line[-1],direction="l"))
 
     for r in right:
         line = np.linspace(r,[r[0], 0 ],22,endpoint=False)[1:]
         points.append(line)
-        windows.append(Window(line,0,[0,0],start=r))
+        windows.append(Window(line,0,[0,0],start=r,end=line[-1],direction="r"))
 
     points = np.array(points)
     return np.reshape(points,(-1,2)), windows
@@ -316,10 +316,10 @@ def create_window_neighbors(windows):
         if next.optimal_point[0] > top.optimal_point[0]:
             top.neighbors.append(next)
 
-    if tops[0].optimal_point[0] < tops[1].optimal_point[0]:
+    if len(tops) > 1 and tops[0].optimal_point[0] < tops[1].optimal_point[0]:
         tops[0].neighbors.append(tops[1])
 
-    if tops[-1].optimal_point[0] < tops[-2].optimal_point[0]:   
+    if len(tops) > 1 and tops[-1].optimal_point[0] < tops[-2].optimal_point[0]:   
         tops[-1].neighbors.append(tops[-2])
 
     for left in lefts[1:len(lefts)-1]:
@@ -337,10 +337,12 @@ def create_window_neighbors(windows):
         rights[0].neighbors.append(rights[1])
 
     #the first top sideline window should be connected to the nearest left sideline window
-    tops[0].neighbors.append(lefts[0])
+    if len(tops) > 1 and len(lefts) > 1:
+        tops[0].neighbors.append(lefts[0])
 
     #the last top sideline window should be connected to the nearest right sideline window
-    tops[-1].neighbors.append(rights[0])
+    if len(tops) > 1 and len(rights) > 1:
+        tops[-1].neighbors.append(rights[0])
 
     #Now check for bad neighbors
     windows = check_window_neighbors(windows)
@@ -446,7 +448,7 @@ def check_window_neighbors(windows):
     return windows
 
 
-def pointInRect(point,rect):
+def point_in_rect(point,rect):
     x1, y1, w, h = rect
     x2, y2 = x1+w, y1+h
     x, y = point
@@ -487,7 +489,10 @@ def boundary_windows(hull_points, returner_pos_x):
 
     left_window = [points_after_returner[ind_left], points_after_returner[ind_bottom]]
     right_window = [points_after_returner[ind_right] ,points_after_returner[ind_bottom]]
-    top_window = [points_after_returner[ind_top[0]], points_after_returner[ind_top[1]]]
+    if (len(ind_top) == 1):
+        top_window = [points_after_returner[ind_top[0]]]
+    else:
+        top_window = [points_after_returner[ind_top[0]], points_after_returner[ind_top[1]]]
 
     for i in range(0, len(points_x)):
         if points_x[i] > x_lim:
@@ -593,7 +598,7 @@ def get_defensive_locations(playpath_):
         size = np.shape(player_csv)[0]
         team = csv[csv['displayName'] == player]['team'].iloc[0]
         if team == attacking_team:
-            attackers.append(Player(player, player_csv['x'], player_csv['y'], team, 0.6))
+            attackers.append(Player(player, player_csv['x'], player_csv['y'], team))
         else:
-            defenders.append(Player(player, player_csv['x'], player_csv['y'], team, 0.6))
+            defenders.append(Player(player, player_csv['x'], player_csv['y'], team))
     return attackers, defenders

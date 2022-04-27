@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 import statistics
 from scipy.spatial import Delaunay, ConvexHull, convex_hull_plot_2d
-from helpers import get_play_description_from_number, inputpath, playpath, visoutputpath, play_folderpath, create_new_folder
+from helpers import get_play_description_from_number, inputpath, playpath, visoutputpath, play_filename, create_new_folder
 import time
 from matplotlib import animation
 from IPython.display import HTML
@@ -22,8 +22,9 @@ import ipywidgets as widgets
 from IPython.display import display,clear_output
 from ipywidgets import Output, Button
 import functools
+import sys, getopt
 
-def drawPitch(width, height, color="black"):
+def draw_pitch(width, height, color="black"):
     fig = plt.figure()
     ax = plt.axes(xlim=(-10, width + 30), ylim=(-15, height + 5))
     plt.axis('off')
@@ -133,9 +134,9 @@ def process_frames(csv, delaunay=False, print_status=False):
         size = np.shape(player_csv)[0]
         team = csv[csv['displayName'] == player]['team'].iloc[0]
         if team == attacking_team:
-            attackers.append(Player(player, player_csv['x'], player_csv['y'], team, 0.6))
+            attackers.append(Player(player, player_csv['x'], player_csv['y'], team))
         elif team != "football":
-            defenders.append(Player(player, player_csv['x'], player_csv['y'], team, 0.6))
+            defenders.append(Player(player, player_csv['x'], player_csv['y'], team))
 
     returner_pos = csv[csv['displayName'] == punt_returner][receive_frame:]
     returner_pos = list(zip(returner_pos.x.tolist(), returner_pos.y.tolist()))
@@ -152,19 +153,13 @@ def process_frames(csv, delaunay=False, print_status=False):
     times = []
     optimal_points = []
     optimal_paths = []
-    bound_points_x =[]
-    bound_points_y = []
-    outer_layer_x = []
-    outer_layer_y = []
     top_windows = []
     right_windows = []
     left_windows = []
     optimal_paths = []
-    start_time = time.time()
     all_windows = []
     frechets = []
     start_time = time.time()
-    
     # Get data before for smooth animation
 
     yardage_gained = returner_pos[0][0] - returner_pos[-1][0]
@@ -201,17 +196,16 @@ def process_frames(csv, delaunay=False, print_status=False):
 
         if abs(returner_pos[frame][0] - returner_pos[-1][0]) > 1:
             frechetDistance = frechet_distance(np.array(returner_pos[frame:]).reshape(-1,2),optimal_path_points)
-
             #frechetDistance = frechetDistance * 5 /
             frechets.append(frechetDistance)
+
         optimal_paths.append(np.reshape(optimal_path_points,(-1,2)))
         o = []
         l = []
         for w in windows:
             o.append(w.optimal_point)
             l.append(w.points)
-            
-            
+
         l = np.array(l)
         lines.append(np.reshape(l,(-1,2)))
         optimal_points.append(o)
@@ -219,22 +213,18 @@ def process_frames(csv, delaunay=False, print_status=False):
         print("Processed frame", frame+1, "/",size,"||",round(((frame+1)/size)*100),"%")
 
     end_time = time.time()
-    print("Took",round(end_time-start_time,2),"s to process",size,"frames")
     if print_status:
         print("Took",round(end_time-start_time,2),"s to process",size,"frames")
     return size, returner_pos, points_def, points_off, balls, lines, times, optimal_paths, optimal_path_points, windows, all_windows, optimal_points, play_direction,frechets,yardage_gained
 
-def animate_return(csv, delaunay=False, print_status=False, use_funcanim=False, outpath=visoutputpath, playname=play_folderpath):
-    fig, ax = drawPitch(100, 53.3)
+def animate_return(csv, delaunay=False, print_status=False, use_funcanim=False, outpath=visoutputpath, playname=play_filename):
+    fig, ax = draw_pitch(100, 53.3)
     anim_values = []
     size,returner_pos,home,away,balls,lines,times,optimal_paths,optimal_path_points,windows,all_windows,optimal_points,play_direction,frechets,yardage_gained = process_frames(csv, delaunay, print_status)
     anim_values.extend([returner_pos, home,away,balls,lines,times])
     ax.plot(np.array(returner_pos).reshape(-1,2)[:,0],np.array(returner_pos).reshape(-1,2)[:,1])
 
     for frame in range(size):
-        # PLOT EVERYTHING
-        #optimal = ax.scatter(optimal_paths[frame][:,0],optimal_paths[frame][:,1],marker="*",c="pink",zorder=17)
-        
         """neighborlines = []
         for window in all_windows[frame]:
             if window.triangle == []:
@@ -245,8 +235,8 @@ def animate_return(csv, delaunay=False, print_status=False, use_funcanim=False, 
                     neighborlines.append(ax.plot([window.optimal_point[0],n.optimal_point[0]],[window.optimal_point[1],n.optimal_point[1]],color="red"))"""
         
         arrow, = ax.plot(optimal_paths[frame][:,0],optimal_paths[frame][:,1],c="green",zorder=15,linewidth=4.5)
+        #optimal = ax.scatter(optimal_paths[frame][:,0],optimal_paths[frame][:,1],marker="*",c="pink",zorder=17)
         #retur = ax.text(returner_pos[frame][0]-0.5, returner_pos[frame][1]-0.5, 'R', zorder=15, c="pink")
-
         returner_line, = ax.plot([returner_pos[frame][0], returner_pos[frame][0]], [0, 53.3], "--", zorder=6, c="black")
         returner_path, = ax.plot([returner_pos[frame][0], returner_pos[frame][0]], [0, 53.3], "-", zorder=5, c="gray", linewidth=5)
         returner_pos_, = ax.plot([returner_pos[frame][0], returner_pos[frame][0]], [0, 53.3], 'o', markersize=13, markerfacecolor="gray", markeredgewidth=1, markeredgecolor="white", zorder=9)
@@ -256,15 +246,13 @@ def animate_return(csv, delaunay=False, print_status=False, use_funcanim=False, 
         offensive, = ax.plot(away[frame][:, 0], away[frame][:, 1], 'o', markersize=10, markerfacecolor="b",
                             markeredgewidth=1, markeredgecolor="white",
                             zorder=5, label='Attackers')
-        ball, = ax.plot(balls[frame][0], balls[frame][1], 'o', markersize=8, markerfacecolor="black", markeredgewidth=1, markeredgecolor="white", zorder=10)
+        ball, = ax.plot(balls[frame][0], balls[frame][1], 'o', markersize=8, markerfacecolor="black", markeredgewidth=1, markeredgecolor="white",
+                zorder=10)
+
         w = ax.scatter(np.array(optimal_points[frame])[:,0],np.array(optimal_points[frame])[:,1],c = "black",marker="x",zorder=16)
         if delaunay:
-            top_points = []
-            left_points = []
-            right_points = []
-            #The heatmap of the arrival times on all the windows
             p = ax.scatter(lines[frame][:, 0], lines[frame][:, 1], c=times[frame], cmap="YlOrRd", marker="s", s=5, zorder=15)
-          
+        
         plt.savefig(f"visualisations/{playname}_frame{frame}.png", format="png")
         if frame < size - 1:
             plt.pause(0.20)
@@ -286,65 +274,8 @@ def animate_return(csv, delaunay=False, print_status=False, use_funcanim=False, 
     plt.savefig(f"visualisations/{playname[:len(playname) - 4]}.png", format="png")
     plt.show()
 
-def visualise_play(playpath_, changeFigsize=False, outpath=visoutputpath, playname=play_folderpath):
-    if changeFigsize:
-        plt.rcParams['figure.figsize'] = [18, 10]
-    csv = pd.read_csv(playpath_)
-    animate_return(csv, delaunay=True, outpath=outpath, playname=playname)
-
-"""
-Get yardage and frechet distance for one play
-"""
-def process_play(playpath_,playname,output_results):
-    csv = pd.read_csv(playpath_)
-    try:
-        size,returner_pos,home,away,balls,lines,times,optimal_paths,optimal_path_points,windows,all_windows,optimal_points,play_direction,frechets,yardage_gained = process_frames(csv, True, True)
-        median_deviation = np.median(np.array(frechets))
-        mean_deviation = np.mean(np.array(frechets))
-        d = {'play':[playname],'yardage':[yardage_gained],'median_deviation':median_deviation,'mean_deviation':mean_deviation}
-        df = pd.DataFrame(data=d)
-        df.to_csv(output_results, mode='a', header=False)
-    #If the play crashes just output nothing
-    except Exception as e:
-        d = {'play':[playname],'yardage':None,'median_deviation':None,'mean_deviation':None}
-        df = pd.DataFrame(data=d)
-        df.to_csv(output_results, mode='a', header=False)
-    
-    
-
-# Draw the delaunay triangles frame by frame
-def visualise_delaunay_play(playpath_, outpath=visoutputpath, playname=play_folderpath, size=40):
-    create_new_folder(outpath)
-    fig, ax = plt.subplots()
-    for frame in range(size):
-        attackers, defenders = get_defensive_locations(playpath_)
-        points_def = np.array(get_points_of_defenders(defenders, frame))
-        arrival_points = None
-        points_off = np.array(get_points_of_defenders(attackers, frame))
-        tri = Delaunay(points_def)
-        lines = get_lines_from_delaunay(tri,points_def)
-        times = get_arrival_times(lines,points_def,points_off)
-        
-        plt.triplot(points_def[:,0], points_def[:,1], tri.simplices)
-        plt.plot(points_def[:,0], points_def[:,1], 'o', c='r',label='Defenders')
-        plt.plot(points_off[:,0], points_off[:,1], 'o', c='b', label='Attackers')
-        p = plt.scatter(lines[:,0],lines[:,1],c=times, cmap = "RdYlGn",marker="s",s=5)
-        cbar = fig.colorbar(p)
-        cbar.set_label("Expected defender arrival time (s)")
-        plt.legend(loc='best')
-        plt.xlim([0, 120])
-        plt.ylim([0, 53.3])
-        plt.xlabel('x')
-        plt.ylabel('y')
-        plt.savefig(f"visualisations/{playname[:len(playname) - 4]}_frame{frame}.png", format="png")
-        if frame < size-1:
-            plt.pause(0.05)
-            ax.clear()
-            fig.clear()
-    plt.show()
-
-def animate_one_play(home, away, balls, return_line, lines,times, play_direction, outpath=visoutputpath, playname=play_folderpath):
-    fig, ax = drawPitch(100, 53.3)
+def animate_one_play(home, away, balls, return_line, lines,times, play_direction, outpath=visoutputpath, playname=play_filename):
+    fig, ax = draw_pitch(100, 53.3)
     team_left, = ax.plot([], [], 'o', markersize=12, markerfacecolor="r", markeredgewidth=1, markeredgecolor="white", zorder=7)
     team_right, = ax.plot([], [], 'o', markersize=12, markerfacecolor="b", markeredgewidth=1, markeredgecolor="white", zorder=7)
     ball, = ax.plot([], [], 'o', markersize=8, markerfacecolor="black", markeredgewidth=1, markeredgecolor="white", zorder=7)
@@ -442,18 +373,131 @@ def animate_one_play(home, away, balls, return_line, lines,times, play_direction
     anim.save(outpath+playname[:-4]+".gif", writer=writergif)
     return HTML(anim.to_html5_video())
 
-def visualise_play_FuncAnimation(play=playpath, outpath=visoutputpath, playname=play_folderpath):
+
+
+def visualise_play(inpath=inputpath+"receiving_plays/", outpath=visoutputpath, playname=play_filename[:-4], changeFigsize=False):
+    if changeFigsize:
+        plt.rcParams['figure.figsize'] = [18, 10]
+    csv = pd.read_csv(inpath+playname+".csv")
+    animate_return(csv, delaunay=True, outpath=outpath, playname=playname)
+
+# Draw the delaunay triangles frame by frame
+def visualise_play_delaunay(inpath=inputpath+"receiving_plays/", outpath=visoutputpath, playname=play_filename[:-4], size=40):
+    create_new_folder(outpath)
+    csv = pd.read_csv(inpath+playname+".csv")
+    receive_frame = csv[csv['event'] == 'punt_received']['frameId'].iloc[0]
+    punt_returner = returner(csv, receive_frame)
+    returner_pos = csv[csv['displayName'] == punt_returner][receive_frame:]
+    returner_pos = list(zip(returner_pos.x.tolist(), returner_pos.y.tolist()))
+    fig, ax = plt.subplots()
+    times = []
+    lines=[]
+    attacking_team = csv[csv['displayName'] == punt_returner]['team'].iloc[0]
+    attackers = []
+    defenders = []
+    for player in np.unique(csv['displayName']):
+        player_csv = csv[csv['displayName'] == player][receive_frame:]
+        size = np.shape(player_csv)[0]
+        team = csv[csv['displayName'] == player]['team'].iloc[0]
+        if team == attacking_team:
+            attackers.append(Player(player, player_csv['x'], player_csv['y'], team))
+        elif team != "football":
+            defenders.append(Player(player, player_csv['x'], player_csv['y'], team))
+
+    for frame in range(size):
+        points_def = np.array(get_points_of_defenders(defenders, frame))
+        arrival_points = None
+        points_off = np.array(get_points_of_defenders(attackers, frame))
+        tri = Delaunay(points_def)
+        bounds = ConvexHull(points_def).vertices
+        top, right, left = boundary_windows(points_def[bounds], returner_pos[frame][0])
+        play_direction = csv["playDirection"].iloc[0]
+        tri = Delaunay(points_def)
+        _, windows = get_lines_from_delaunay(tri,defenders,frame)
+        _,side_windows = get_lines_from_sidelines(top,left,right,returner_pos[frame])
+        arrival_time, windows = get_arrival_times(windows,side_windows,defenders,attackers,frame,returner_pos[frame])
+        times.append(arrival_time)
+        plt.triplot(points_def[:,0], points_def[:,1], tri.simplices)
+        plt.plot(points_def[:,0], points_def[:,1], 'o', c='r',label='Defenders')
+        plt.plot(points_off[:,0], points_off[:,1], 'o', c='b', label='Attackers')
+        #cbar = fig.colorbar(p)
+        #cbar.set_label("Expected defender arrival time (s)")
+        plt.legend(loc='best')
+        plt.xlim([0, 120])
+        plt.ylim([0, 53.3])
+        plt.xlabel('x')
+        plt.ylabel('y')
+        plt.savefig(f"visualisations/{playname}_frame{frame}.png", format="png")
+        if frame < size-1:
+            plt.pause(0.05)
+            ax.clear()
+            fig.clear()
+    plt.show()
+
+def visualise_play_FuncAnimation(inpath=inputpath+"receiving_plays/", outpath=visoutputpath, playname=play_filename[:-4]):
     create_new_folder(outpath)
     plt.rcParams['figure.figsize'] = [18, 10]
     anim_values = []
-    if play == playpath:
-        csv = pd.read_csv(playpath)
-    else:
-        csv = pd.read_csv(inputpath+"receiving_plays/"+play)
-    size,returner_pos,home,away,balls,lines,times,ox,oy,optimal_path,optimal_path_points,windows,optimal_points,play_direction = process_frames(csv, delaunay=True)
-    anim_values.extend([returner_pos, home,away,balls,lines,times,ox,oy, play_direction])
-    animate_one_play(anim_values[1],anim_values[2],anim_values[3],anim_values[0],anim_values[4],anim_values[5], anim_values[8], outpath, playname)
+    csv = pd.read_csv(inpath+playname+".csv")
+    size,returner_pos,home,away,balls,lines,times,optimal_paths,optimal_path_points,windows,all_windows,optimal_points,play_direction,frechets,yardage_gained = process_frames(csv, delaunay=True)
+    anim_values.extend([returner_pos, home,away,balls,lines,times,play_direction])
+    animate_one_play(anim_values[1],anim_values[2],anim_values[3],anim_values[0],anim_values[4],anim_values[5], anim_values[6], outpath, playname+".csv")
 
-#OLD visualise_delaunay_play(playpath)
-#visualise_play_FuncAnimation(playpath)
-#visualise_play(playpath, changeFigsize=True)
+def create_graph(output_results):
+    df = pd.read_csv(output_results)
+    df = df.dropna()
+    df = df.drop(df[df.yardage <= 0].index)
+    
+    yardage = df['yardage']
+    log_yardage = np.log10(yardage)
+    median_deviation = df['median_deviation']
+    mean_deviation = df['mean_deviation']
+    r = np.corrcoef(log_yardage, median_deviation)
+    print(r)
+    plt.scatter(median_deviation,yardage,s=10)
+    m, b = np.polyfit(median_deviation, yardage, 1)
+    plt.plot(median_deviation, m*median_deviation+b,c="black")
+    plt.title("Plot showing median path deviation vs yards gained for each play")
+    plt.xlabel("Median Path Deviation")
+    plt.ylabel("Yards gained")
+    plt.show()
+
+def main(argv):
+    # "funcanim" "new" "old"
+    vis_func = "new"
+    play = play_filename[:-4]
+    inpath = inputpath+"receiving_plays/"
+    outpath = 'visualisations/'
+    try:
+        opts, args = getopt.getopt(argv,"hp:o:i:v:",["help","playid=","outpath=","inpath=","visfunc="])
+    except getopt.GetoptError:
+        print('visualisation_functions.py -p <play_id> -i <input_path> -o <output_path> -v <"new"/"old"/"funcanim">')
+        sys.exit(2)
+    for opt, arg in opts:
+        if opt == '-h':
+            print('visualisation_functions.py -p <play_id> -i <input_path> -o <output_path> -v <"new"/"old"/"funcanim">')
+            sys.exit()
+        elif opt in ("-p", "--playid"):
+            play = arg
+        elif opt in ("-o", "--outpath"):
+            outpath = arg
+        elif opt in ("-i", "--inpath"):
+            inpath = arg
+        elif opt in ("-v", "--visfunc"):
+            if arg == "new" or arg == "old" or arg == "funcanim":
+                vis_func = arg
+            else:
+                raise ValueError("Error: --visfunc must be 'new', 'old' or 'funcanim'")
+    create_new_folder(outpath[:-1])
+    if vis_func == "new":
+        #play=play_filename, outpath=visoutputpath, playname=play_filename[:-4], inpath=inputpath+"receiving_plays/"):
+        visualise_play_FuncAnimation(inpath, outpath, play)
+    elif vis_func == "old":
+        visualise_play_delaunay(inpath, outpath, play)
+    elif vis_func == "funcanim":
+        visualise_play(inpath, outpath, play, changeFigsize=True)
+    else:
+        raise ValueError("Error: visfunc must be 'new', 'old' or 'funcanim'")
+
+if __name__ == '__main__':
+    main(sys.argv[1:])
