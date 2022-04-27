@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 import statistics
 from scipy.spatial import Delaunay, ConvexHull, convex_hull_plot_2d
-from helpers import get_play_description_from_number, inputpath, playpath, visoutputpath, play_filename, create_new_folder
+from helpers import get_play_description_from_number, inputpath, playpath, visoutputpath, play_filename, create_new_folder, heuristic_func
 import time
 from matplotlib import animation
 from IPython.display import HTML
@@ -121,7 +121,7 @@ def extract_one_game(game):
     balls = list(zip(ball_df.x.tolist(), ball_df.y.tolist()))
     return home, away, balls
 
-def process_frames(csv, delaunay=False, print_status=False):
+def process_frames(csv, delaunay=False, print_status=False, heuristic=lambda c, d: np.linalg.norm(c[0] - d[0]), old_astar=False):
     play_direction = csv["playDirection"].iloc[0]
     receive_frame = csv[csv['event'] == 'punt_received']['frameId'].iloc[0]
     punt_returner = returner(csv, receive_frame)
@@ -189,7 +189,7 @@ def process_frames(csv, delaunay=False, print_status=False):
 
         #Calculate the optimal path through the windows
         windows = create_window_neighbors(windows)
-        optimal_path = get_optimal_path(windows,[returner_pos[frame][0],returner_pos[frame][1]],[10,25], returner_speed)
+        optimal_path = get_optimal_path(windows,[returner_pos[frame][0],returner_pos[frame][1]],[10,25], returner_speed, heuristic, old_astar)
         optimal_path_points = []
         for window in optimal_path:
             optimal_path_points.append(window.optimal_point)
@@ -217,10 +217,10 @@ def process_frames(csv, delaunay=False, print_status=False):
         print("Took",round(end_time-start_time,2),"s to process",size,"frames")
     return size, returner_pos, points_def, points_off, balls, lines, times, optimal_paths, optimal_path_points, windows, all_windows, optimal_points, play_direction,frechets,yardage_gained
 
-def animate_return(csv, delaunay=False, print_status=False, use_funcanim=False, outpath=visoutputpath, playname=play_filename):
+def animate_return(csv, delaunay=False, print_status=False, use_funcanim=False, outpath=visoutputpath, playname=play_filename, heuristic=lambda c, d: np.linalg.norm(c[0] - d[0]), old_astar=False):
     fig, ax = draw_pitch(100, 53.3)
     anim_values = []
-    size,returner_pos,home,away,balls,lines,times,optimal_paths,optimal_path_points,windows,all_windows,optimal_points,play_direction,frechets,yardage_gained = process_frames(csv, delaunay, print_status)
+    size,returner_pos,home,away,balls,lines,times,optimal_paths,optimal_path_points,windows,all_windows,optimal_points,play_direction,frechets,yardage_gained = process_frames(csv, delaunay, print_status, heuristic, old_astar)
     anim_values.extend([returner_pos, home,away,balls,lines,times])
     ax.plot(np.array(returner_pos).reshape(-1,2)[:,0],np.array(returner_pos).reshape(-1,2)[:,1])
 
@@ -253,7 +253,7 @@ def animate_return(csv, delaunay=False, print_status=False, use_funcanim=False, 
         if delaunay:
             p = ax.scatter(lines[frame][:, 0], lines[frame][:, 1], c=times[frame], cmap="YlOrRd", marker="s", s=5, zorder=15)
         
-        plt.savefig(f"visualisations/{playname}_frame{frame}.png", format="png")
+        plt.savefig(outpath+f"{playname}_frame{frame}.png", format="png")
         if frame < size - 1:
             plt.pause(0.20)
             if delaunay:
@@ -271,7 +271,7 @@ def animate_return(csv, delaunay=False, print_status=False, use_funcanim=False, 
             #for n in neighborlines:
                 #n[0].remove()
 
-    plt.savefig(f"visualisations/{playname[:len(playname) - 4]}.png", format="png")
+    plt.savefig(outpath+f"{playname}.png", format="png")
     plt.show()
 
 def animate_one_play(home, away, balls, return_line, lines,times, play_direction, outpath=visoutputpath, playname=play_filename):
@@ -370,19 +370,19 @@ def animate_one_play(home, away, balls, return_line, lines,times, play_direction
                                    frames=len(balls), interval=100, blit=False)
     
     writergif = animation.PillowWriter(fps=30) 
-    anim.save(outpath+playname[:-4]+".gif", writer=writergif)
+    anim.save(outpath+playname+".gif", writer=writergif)
     return HTML(anim.to_html5_video())
 
 
 
-def visualise_play(inpath=inputpath+"receiving_plays/", outpath=visoutputpath, playname=play_filename[:-4], changeFigsize=False):
+def visualise_play(inpath=inputpath+"receiving_plays/", outpath=visoutputpath, playname=play_filename[:-4], changeFigsize=False, heuristic=lambda c, d: np.linalg.norm(c[0] - d[0]), old_astar=False):
     if changeFigsize:
         plt.rcParams['figure.figsize'] = [18, 10]
     csv = pd.read_csv(inpath+playname+".csv")
-    animate_return(csv, delaunay=True, outpath=outpath, playname=playname)
+    animate_return(csv, delaunay=True, outpath=outpath, playname=playname, heuristic=heuristic, old_astar=old_astar)
 
 # Draw the delaunay triangles frame by frame
-def visualise_play_delaunay(inpath=inputpath+"receiving_plays/", outpath=visoutputpath, playname=play_filename[:-4], size=40):
+def visualise_play_delaunay(inpath=inputpath+"receiving_plays/", outpath=visoutputpath, playname=play_filename[:-4], size=40, heuristic=lambda c, d: np.linalg.norm(c[0] - d[0])):
     create_new_folder(outpath)
     csv = pd.read_csv(inpath+playname+".csv")
     receive_frame = csv[csv['event'] == 'punt_received']['frameId'].iloc[0]
@@ -427,19 +427,19 @@ def visualise_play_delaunay(inpath=inputpath+"receiving_plays/", outpath=visoutp
         plt.ylim([0, 53.3])
         plt.xlabel('x')
         plt.ylabel('y')
-        plt.savefig(f"visualisations/{playname}_frame{frame}.png", format="png")
+        plt.savefig(outpath+f"{playname}_frame{frame}.png", format="png")
         if frame < size-1:
             plt.pause(0.05)
             ax.clear()
             fig.clear()
     plt.show()
 
-def visualise_play_FuncAnimation(inpath=inputpath+"receiving_plays/", outpath=visoutputpath, playname=play_filename[:-4]):
+def visualise_play_FuncAnimation(inpath=inputpath+"receiving_plays/", outpath=visoutputpath, playname=play_filename[:-4], heuristic=lambda c, d: np.linalg.norm(c[0] - d[0]), old_astar=False):
     create_new_folder(outpath)
     plt.rcParams['figure.figsize'] = [18, 10]
     anim_values = []
     csv = pd.read_csv(inpath+playname+".csv")
-    size,returner_pos,home,away,balls,lines,times,optimal_paths,optimal_path_points,windows,all_windows,optimal_points,play_direction,frechets,yardage_gained = process_frames(csv, delaunay=True)
+    size,returner_pos,home,away,balls,lines,times,optimal_paths,optimal_path_points,windows,all_windows,optimal_points,play_direction,frechets,yardage_gained = process_frames(csv, delaunay=True, heuristic=heuristic, old_astar=old_astar)
     anim_values.extend([returner_pos, home,away,balls,lines,times,play_direction])
     animate_one_play(anim_values[1],anim_values[2],anim_values[3],anim_values[0],anim_values[4],anim_values[5], anim_values[6], outpath, playname+".csv")
 
@@ -464,18 +464,19 @@ def create_graph(output_results):
 
 def main(argv):
     # "funcanim" "new" "old"
+    oastar = False
     vis_func = "new"
     play = play_filename[:-4]
     inpath = inputpath+"receiving_plays/"
     outpath = 'visualisations/'
     try:
-        opts, args = getopt.getopt(argv,"hp:o:i:v:",["help","playid=","outpath=","inpath=","visfunc="])
+        opts, args = getopt.getopt(argv,"hp:o:i:v:t",["help","playid=","outpath=","inpath=","visfunc=","astar_old"])
     except getopt.GetoptError:
-        print('visualisation_functions.py -p <play_id> -i <input_path> -o <output_path> -v <"new"/"old"/"funcanim">')
+        print('visualisation_functions.py -p <play_id> -i <input_path> -o <output_path> -v <"new"/"old"/"funcanim"> -a')
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
-            print('visualisation_functions.py -p <play_id> -i <input_path> -o <output_path> -v <"new"/"old"/"funcanim">')
+            print('visualisation_functions.py -p <play_id> -i <input_path> -o <output_path> -v <"new"/"old"/"funcanim"> -a')
             sys.exit()
         elif opt in ("-p", "--playid"):
             play = arg
@@ -483,19 +484,21 @@ def main(argv):
             outpath = arg
         elif opt in ("-i", "--inpath"):
             inpath = arg
+        elif opt in ("-t", "--astar_old"):
+            oastar = True
         elif opt in ("-v", "--visfunc"):
             if arg == "new" or arg == "old" or arg == "funcanim":
                 vis_func = arg
             else:
                 raise ValueError("Error: --visfunc must be 'new', 'old' or 'funcanim'")
     create_new_folder(outpath[:-1])
-    if vis_func == "new":
+    if vis_func == "funcanim":
         #play=play_filename, outpath=visoutputpath, playname=play_filename[:-4], inpath=inputpath+"receiving_plays/"):
-        visualise_play_FuncAnimation(inpath, outpath, play)
+        visualise_play_FuncAnimation(inpath, outpath, play, heuristic=heuristic_func, old_astar=oastar)
     elif vis_func == "old":
         visualise_play_delaunay(inpath, outpath, play)
-    elif vis_func == "funcanim":
-        visualise_play(inpath, outpath, play, changeFigsize=True)
+    elif vis_func == "new":
+        visualise_play(inpath, outpath, play, changeFigsize=True, heuristic=heuristic_func, old_astar=oastar)
     else:
         raise ValueError("Error: visfunc must be 'new', 'old' or 'funcanim'")
 

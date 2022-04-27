@@ -1,4 +1,5 @@
 import os
+import numpy as np
 
 """# Global Variables / Paths"""
 
@@ -12,6 +13,8 @@ drive_folderpath = "Colab Notebooks"
 useDrive = False
 avg_player_speed = 7
 num_threads = 16
+
+heuristic_func = lambda c, d: np.linalg.norm(c[0] - d[0])
 
 
 
