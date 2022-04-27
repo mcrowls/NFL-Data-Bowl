@@ -16,7 +16,7 @@ try:
 except:
     not_unix = True
 from visualisation_functions import process_frames
-from helpers import num_threads, play_filename
+from helpers import num_threads, play_filename, heuristic_func
 import sys, getopt
 from functools import partial
 
@@ -42,12 +42,12 @@ def get_memory():
 """
 Get yardage and frechet distance for one play
 """
-def process_play(playpath_,playname,filename="results_plays", outpath="results/"):
+def process_play(playpath_,playname,filename="results_plays", outpath="results/", heuristic=lambda c, d: np.linalg.norm(c[0] - d[0]), old_astar=False):
     csv = pd.read_csv(playpath_)
     try:
         size,returner_pos,home,away,balls,lines, \
         times,optimal_paths,optimal_path_points,windows,\
-        all_windows,optimal_points,play_direction,frechets,yardage_gained = process_frames(csv, True, True)
+        all_windows,optimal_points,play_direction,frechets,yardage_gained = process_frames(csv, True, True, heuristic=heuristic, old_astar=old_astar)
         median_deviation = np.median(np.array(frechets))
         mean_deviation = np.mean(np.array(frechets))
         d = {'play':[playname],'yardage':[yardage_gained],'median_deviation':median_deviation,'mean_deviation':mean_deviation}
@@ -59,42 +59,43 @@ def process_play(playpath_,playname,filename="results_plays", outpath="results/"
         df = pd.DataFrame(data=d)
         df.to_csv(outpath+filename+".csv", mode='a', header=False)
 
-def process_play_lam(play, inpath=inputpath+"/receiving_plays", filename="results_plays", outpath="results/"):
+def process_play_lam(play, inpath=inputpath+"/receiving_plays", filename="results_plays", outpath="results/", heuristic=lambda c, d: np.linalg.norm(c[0] - d[0]), old_astar=False):
     results = pd.read_csv(outpath+filename+".csv")
     if play in results.values:
         return
     print(f"Processing play: {play}")
-    process_play(inpath+"/"+play,play,filename,outpath)
+    process_play(inpath+"/"+play,play,filename,outpath, heuristic=heuristic, old_astar=old_astar)
 
-def process_all_plays(inpath=inputpath+"/receiving_plays", outpath="results/"):
+def process_all_plays(inpath=inputpath+"/receiving_plays", outpath="results/", heuristic=lambda c, d: np.linalg.norm(c[0] - d[0]), old_astar=False):
     if not os.path.exists(outpath):
         file = open(outpath,"w")
         file.write("id,play,yardage,median_deviation,mean_deviation\n")
         file.close()
     if multithread:
         pool = multiprocessing.Pool(num_threads)
-        pool.map(partial(process_play_lam, inpath=inpath+"/", filename="results_plays", outpath=outpath), os.listdir(inpath))
+        pool.map(partial(process_play_lam, inpath=inpath+"/", filename="results_plays", outpath=outpath, heuristic=heuristic, old_astar=old_astar), os.listdir(inpath))
     else:
         #files = next(os.walk(outputpath_+f'physionet/data_{ecg_type}/{fn}/'))[1]
         #for file_ in next(os.walk(outputpath_+f'physionet/data_{ecg_type}/{fn}/'))[2]:
         #    if file_.endswith(f"{ecg_type}_signal.npy"):
         for p in os.listdir(inpath):
-            process_play_lam(p, inpath=inpath+"/", filename="results_plays", outpath=outpath)
+            process_play_lam(p, inpath=inpath+"/", filename="results_plays", outpath=outpath, heuristic=heuristic, old_astar=old_astar)
 
 def main(argv):
     log = False
+    oastar = False
     process_all = False
     play = play_filename[:-4]
     inpath = inputpath+"/receiving_plays"
     outputpath = 'results'
     try:
-        opts, args = getopt.getopt(argv,"hap:o:i:lm:",["help","all","playid=","outpath=","inpath=","log","mem="])
+        opts, args = getopt.getopt(argv,"hap:o:i:lm:t",["help","all","playid=","outpath=","inpath=","log","mem=","astar_old"])
     except getopt.GetoptError:
-        print('processing_functions.py [-a | -p <play_id>] -i <input_path> -o <output_path> -l -m <percentage_of_mem_usage_allowed>')
+        print('processing_functions.py [-a | -p <play_id>] -i <input_path> -o <output_path> -l -m <percentage_of_mem_usage_allowed> -t')
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
-            print('processing_functions.py [-a | -p <play_id>] -i <input_path> -o <output_path> -l -m <percentage_of_mem_usage_allowed>')
+            print('processing_functions.py [-a | -p <play_id>] -i <input_path> -o <output_path> -l -m <percentage_of_mem_usage_allowed> -t')
             sys.exit()
         elif opt in ("-a", "--all"):
             if opt in ("-p", "--playid"):
@@ -112,11 +113,17 @@ def main(argv):
             log = True
         elif opt in ("-m", "--mem"):
             get_memory(arg)
+        elif opt in ("-t", "--astar_old"):
+            oastar = True
+    if log:
+        print("Printing to logfile")
     create_new_folder(outputpath)
     if process_all:
-        process_all_plays(inpath, outputpath+"/")
+        process_all_plays(inpath, outputpath+"/", heuristic=heuristic_func, old_astar=oastar)
     else:
-        process_play(inpath+"/"+play+".csv", play, outputpath, f"result_{play}")
+        process_play(inpath+"/"+play+".csv", play, outputpath, f"result_{play}", heuristic=heuristic_func, old_astar=oastar)
+    if log:
+        print("Stopped printing to logfile")
 
 if __name__ == '__main__':
     main(sys.argv[1:])

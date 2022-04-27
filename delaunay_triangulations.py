@@ -504,16 +504,25 @@ def boundary_windows(hull_points, returner_pos_x):
 
     return np.unique(top_window,axis=0), np.unique(right_window,axis=0), np.unique(left_window,axis=0)
 
-
-def get_heuristic(current_node,neighbor,end,return_speed):
-    neighbor.g = (np.linalg.norm(neighbor.optimal_point - current_node.optimal_point)/return_speed)/neighbor.optimal_time
-    #print(angle(neighbor.optimal_point, current_node.optimal_point)/(2*math.pi))
-    neighbor.g = neighbor.g*angle(neighbor.optimal_point, current_node.optimal_point)
-    #neighbor.g = current_node.g + neighbor.optimal_time
-
-    #h is the distance from the neighbor node to the end, only in the x direction
-    neighbor.h = np.linalg.norm(neighbor.optimal_point[0] - end[0])
-    neighbor.f = neighbor.g/neighbor.h
+# DEFAULT: np.linalg.norm(neighbor.optimal_point[0] - end[0])
+# OLD: np.linalg.norm(neighbor.optimal_point - end)/return_speed
+def get_heuristic(current_node,neighbor,end,return_speed,heuristic=lambda c, d: np.linalg.norm(c[0] - d[0]), old_astar=False):
+    if old_astar:
+        neighbor.g = (np.linalg.norm(neighbor.optimal_point - current_node.optimal_point)/return_speed)
+        neighbor.g = current_node.g + neighbor.g
+        #h is the distance from the neighbor node to the end, only in the x direction
+        h_f = lambda c, d: np.linalg.norm(c - d)
+        neighbor.h = h_f(neighbor.optimal_point, end)
+        neighbor.f = neighbor.g + neighbor.h
+    else:
+        neighbor.g = (np.linalg.norm(neighbor.optimal_point - current_node.optimal_point)/return_speed)/neighbor.optimal_time
+        #print(angle(neighbor.optimal_point, current_node.optimal_point)/(2*math.pi))
+        neighbor.g = neighbor.g*angle(neighbor.optimal_point, current_node.optimal_point)
+        #neighbor.g = current_node.g + neighbor.g
+        
+        #h is the distance from the neighbor node to the end, only in the x direction
+        neighbor.h = heuristic(neighbor.optimal_point, end)#np.linalg.norm(neighbor.optimal_point[0] - end[0])
+        neighbor.f = neighbor.g/neighbor.h
     return neighbor
 
 def reconstruct_path(current_node, end, start_window,carrier):
@@ -532,8 +541,7 @@ def reconstruct_path(current_node, end, start_window,carrier):
     the_path.append(Window(None,None,carrier))
     return the_path
 
-def get_optimal_path(windows,carrier,end,return_speed):
-
+def get_optimal_path(windows,carrier,end,return_speed, heuristic=lambda c, d: np.linalg.norm(c[0] - d[0]), old_astar=False):
     start_window = None
     #assuming end is an x y point, need to find the window closest to the end
     min_dist_end = float('inf')
@@ -570,7 +578,7 @@ def get_optimal_path(windows,carrier,end,return_speed):
                 continue
 
             #if the neighbor is not in the closed list, need to calculate the heuristic
-            neighbor = get_heuristic(current_node,neighbor,end,return_speed)
+            neighbor = get_heuristic(current_node,neighbor,end,return_speed, heuristic=heuristic, old_astar=old_astar)
 
             #if this neighbor is in the open list already, and it's g value in the open list is less than the g value just calculated, do nothing
             #because the neighbor in the open list is better
