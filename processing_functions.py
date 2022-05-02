@@ -1,12 +1,7 @@
 from helpers import create_new_folder, inputpath
 import os
 import pandas as pd
-multithread = True
-try:
-    import multiprocessing
-except:
-    print("Error: Cannot import module 'multiprocessing' - defaulting to single-core")
-    multithread = False
+
 import numpy as np
 import random
 import sys
@@ -17,9 +12,15 @@ except:
     not_unix = True
 from visualisation_functions import process_frames
 from pitch_control import pitch_control
-from helpers import num_threads, play_filename, heuristic_func
+from helpers import num_threads, play_filename, heuristic_func, do_multithread, optimal_path_heuristic
 import sys, getopt
 from functools import partial
+multithread = do_multithread
+try:
+    import multiprocessing
+except:
+    print("Error: Cannot import module 'multiprocessing' - defaulting to single-core")
+    multithread = False
 
 """
 Utils for RAM usage, CPU usage, Multithreading
@@ -43,7 +44,7 @@ def get_memory():
 """
 Get yardage and frechet distance for one play
 """
-def process_play(playpath_,playname,filename="results_plays", outpath="results/", heuristic=lambda c, d: np.linalg.norm(c[0] - d[0]), algorithm="astar_delaunay"):
+def process_play(playpath_,playname,filename="results_plays", outpath="results/", heuristic=optimal_path_heuristic, algorithm="astar_delaunay"):
     csv = pd.read_csv(playpath_)
     try:
         if algorithm == "pitch_control":
@@ -56,34 +57,42 @@ def process_play(playpath_,playname,filename="results_plays", outpath="results/"
         mean_deviation = np.mean(np.array(frechets))
         d = {'play':[playname],'yardage':[yardage_gained],'median_deviation':median_deviation,'mean_deviation':mean_deviation, 'algorithm':algorithm}
         df = pd.DataFrame(data=d)
-        df.to_csv(outpath+filename+".csv", mode='a', header=False)
+        df.to_csv(outpath+filename+".csv", mode='a')
     #If the play crashes just output nothing
     except Exception as e:
-        d = {'play':[playname],'yardage':None,'median_deviation':None,'mean_deviation':None}
+        d = {'play':[playname],'yardage':None,'median_deviation':None,'mean_deviation':None, 'algorithm':None}
         df = pd.DataFrame(data=d)
-        df.to_csv(outpath+filename+".csv", mode='a', header=False)
+        df.to_csv(outpath+filename+".csv", mode='a')
+    return df
 
-def process_play_lam(play, inpath=inputpath+"/receiving_plays", filename="results_plays", outpath="results/", heuristic=lambda c, d: np.linalg.norm(c[0] - d[0]), algorithm="astar_delaunay"):
-    results = pd.read_csv(outpath+filename+".csv")
-    if play in results.values:
-        return
+def process_play_lam(play, inpath=inputpath+"/receiving_plays", filename="results_plays", outpath="results/", algorithm="astar_delaunay"):
+    heuristic=optimal_path_heuristic
+    if os.path.exists(outpath+filename+".csv"):
+        results = pd.read_csv(outpath+filename+".csv")
+        if play in results.values:
+            return results.loc[results['filename']==play]
     print(f"Processing play: {play}")
-    process_play(inpath+"/"+play,play,filename,outpath, heuristic=heuristic, algorithm=algorithm)
+    return process_play(inpath+"/"+play,play,filename,outpath, heuristic=heuristic, algorithm=algorithm)
 
 def process_all_plays(inpath=inputpath+"/receiving_plays", outpath="results/", heuristic=lambda c, d: np.linalg.norm(c[0] - d[0]), algorithm="astar_delaunay"):
     if not os.path.exists(outpath):
         file = open(outpath,"w")
-        file.write("id,play,yardage,median_deviation,mean_deviation\n")
+        file.write("id,play,yardage,median_deviation,mean_deviation,algorithm\n")
         file.close()
     if multithread:
         pool = multiprocessing.Pool(num_threads)
-        pool.map(partial(process_play_lam, inpath=inpath+"/", filename="results_plays", outpath=outpath, heuristic=heuristic, algorithm=algorithm), os.listdir(inpath))
+        results = pool.map(partial(process_play_lam, inpath=inpath+"/", filename="results_plays", outpath=outpath, algorithm=algorithm), os.listdir(inpath))
+        print(results)
+        df = pd.DataFrame(data=results)
+        df.to_csv(f'results_plays_{algorithm}.csv', mode='a')
     else:
         #files = next(os.walk(outputpath_+f'physionet/data_{ecg_type}/{fn}/'))[1]
         #for file_ in next(os.walk(outputpath_+f'physionet/data_{ecg_type}/{fn}/'))[2]:
         #    if file_.endswith(f"{ecg_type}_signal.npy"):
+        results = []
         for p in os.listdir(inpath):
-            process_play_lam(p, inpath=inpath+"/", filename="results_plays", outpath=outpath, heuristic=heuristic, algorithm=algorithm)
+            results.append(process_play_lam(p, inpath=inpath+"/", filename="results_plays", outpath=outpath, heuristic=heuristic, algorithm=algorithm))
+        pd.concat(results).to_csv(f'results_plays_{algorithm}.csv')
 
 def main(argv):
     logpath = None
@@ -116,7 +125,7 @@ def main(argv):
         elif opt in ("-l", "--logpath"):
             logpath = arg
         elif opt in ("-m", "--mem"):
-            get_memory(arg)
+            memory_limit(arg)
         elif opt in ("-q", "--algorithm"):
             algorithm = arg
     if logpath is not None:
