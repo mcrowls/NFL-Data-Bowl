@@ -22,9 +22,11 @@ Punt Returner's path, the method used to calculate this, and how it can be optim
 # --outpath / -o : path to store the results (/results or /visualisations)
 # --logpath / -l : path to store the output - print statements from the logger
 # --mem / -m : proportion (% / 100) in range [0, 1] of system memory available during processing (default=0.8=80%)
-# --astar_old / -q : boolean whether to use the project's Delaunay window implementation of A* (default, False) 
-#                    or to use the standard A* pathfinding algorithm (True)
-processing_functions.py [-a | -p <play_id>] -i <input_path> -o <output_path> -l <logfile_full_filepath> -m <percentage_of_mem_usage_allowed> -q
+# --algorithm / -q : which model to use to calculate optimal path; 
+#                       - astar_delaunay: the project's Delaunay window implementation of A* (default, False) 
+#                       - astar: the standard A* pathfinding algorithm (True)
+#                       - pitch_control: the Pitch Control method as described in the paper
+processing_functions.py [-a | -p <play_id>] -i <input_path> -o <output_path> -l <logfile_full_filepath> -m <percentage_of_mem_usage_allowed> -q <algorithm_type>
 
 
 
@@ -32,8 +34,11 @@ processing_functions.py [-a | -p <play_id>] -i <input_path> -o <output_path> -l 
 # --inpath / -i: path to the folder containing the play csv's   
 # --outpath / -o: path to store the results (/results or /visualisations)
 # --visfunc / -v: function to use to create the play visualisation; new/old/funcanim
-# --astar_old / -q: function to use to create the play visualisation; new/old/funcanim
-visualisation_functions.py -p <play_id> -i <input_path> -o <output_path> -v <"new"/"old"/"funcanim"> -q
+# --algorithm / -q : which model to use to calculate optimal path; 
+#                       - astar_delaunay: the project's Delaunay window implementation of A* (default, False) 
+#                       - astar: the standard A* pathfinding algorithm (True)
+#                       - pitch_control: the Pitch Control method as described in the paper
+visualisation_functions.py -p <play_id> -i <input_path> -o <output_path> -v <"new"/"old"/"funcanim"> -q <algorithm_type>
 ```
 
 Global variables, input/output paths and defaults for command-line options can be changed in helpers.py:

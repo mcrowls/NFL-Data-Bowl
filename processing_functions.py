@@ -16,6 +16,7 @@ try:
 except:
     not_unix = True
 from visualisation_functions import process_frames
+from pitch_control import pitch_control
 from helpers import num_threads, play_filename, heuristic_func
 import sys, getopt
 from functools import partial
@@ -42,15 +43,18 @@ def get_memory():
 """
 Get yardage and frechet distance for one play
 """
-def process_play(playpath_,playname,filename="results_plays", outpath="results/", heuristic=lambda c, d: np.linalg.norm(c[0] - d[0]), old_astar=False):
+def process_play(playpath_,playname,filename="results_plays", outpath="results/", heuristic=lambda c, d: np.linalg.norm(c[0] - d[0]), algorithm="astar_delaunay"):
     csv = pd.read_csv(playpath_)
     try:
-        size,returner_pos,home,away,balls,lines, \
-        times,optimal_paths,optimal_path_points,windows,\
-        all_windows,optimal_points,play_direction,frechets,yardage_gained = process_frames(csv, True, True, heuristic=heuristic, old_astar=old_astar)
+        if algorithm == "pitch_control":
+            returner_pos, points, home, away, frame, pixels, pixel_values, frechet, yards, pitch_fraction, predicted_yards = pitch_control(csv)
+        else:
+            size,returner_pos,home,away,balls,lines, \
+            times,optimal_paths,optimal_path_points,windows,\
+            all_windows,optimal_points,play_direction,frechets,yardage_gained = process_frames(csv, True, True, heuristic=heuristic, algorithm=algorithm)
         median_deviation = np.median(np.array(frechets))
         mean_deviation = np.mean(np.array(frechets))
-        d = {'play':[playname],'yardage':[yardage_gained],'median_deviation':median_deviation,'mean_deviation':mean_deviation}
+        d = {'play':[playname],'yardage':[yardage_gained],'median_deviation':median_deviation,'mean_deviation':mean_deviation, 'algorithm':algorithm}
         df = pd.DataFrame(data=d)
         df.to_csv(outpath+filename+".csv", mode='a', header=False)
     #If the play crashes just output nothing
@@ -59,43 +63,43 @@ def process_play(playpath_,playname,filename="results_plays", outpath="results/"
         df = pd.DataFrame(data=d)
         df.to_csv(outpath+filename+".csv", mode='a', header=False)
 
-def process_play_lam(play, inpath=inputpath+"/receiving_plays", filename="results_plays", outpath="results/", heuristic=lambda c, d: np.linalg.norm(c[0] - d[0]), old_astar=False):
+def process_play_lam(play, inpath=inputpath+"/receiving_plays", filename="results_plays", outpath="results/", heuristic=lambda c, d: np.linalg.norm(c[0] - d[0]), algorithm="astar_delaunay"):
     results = pd.read_csv(outpath+filename+".csv")
     if play in results.values:
         return
     print(f"Processing play: {play}")
-    process_play(inpath+"/"+play,play,filename,outpath, heuristic=heuristic, old_astar=old_astar)
+    process_play(inpath+"/"+play,play,filename,outpath, heuristic=heuristic, algorithm=algorithm)
 
-def process_all_plays(inpath=inputpath+"/receiving_plays", outpath="results/", heuristic=lambda c, d: np.linalg.norm(c[0] - d[0]), old_astar=False):
+def process_all_plays(inpath=inputpath+"/receiving_plays", outpath="results/", heuristic=lambda c, d: np.linalg.norm(c[0] - d[0]), algorithm="astar_delaunay"):
     if not os.path.exists(outpath):
         file = open(outpath,"w")
         file.write("id,play,yardage,median_deviation,mean_deviation\n")
         file.close()
     if multithread:
         pool = multiprocessing.Pool(num_threads)
-        pool.map(partial(process_play_lam, inpath=inpath+"/", filename="results_plays", outpath=outpath, heuristic=heuristic, old_astar=old_astar), os.listdir(inpath))
+        pool.map(partial(process_play_lam, inpath=inpath+"/", filename="results_plays", outpath=outpath, heuristic=heuristic, algorithm=algorithm), os.listdir(inpath))
     else:
         #files = next(os.walk(outputpath_+f'physionet/data_{ecg_type}/{fn}/'))[1]
         #for file_ in next(os.walk(outputpath_+f'physionet/data_{ecg_type}/{fn}/'))[2]:
         #    if file_.endswith(f"{ecg_type}_signal.npy"):
         for p in os.listdir(inpath):
-            process_play_lam(p, inpath=inpath+"/", filename="results_plays", outpath=outpath, heuristic=heuristic, old_astar=old_astar)
+            process_play_lam(p, inpath=inpath+"/", filename="results_plays", outpath=outpath, heuristic=heuristic, algorithm=algorithm)
 
 def main(argv):
     logpath = None
-    oastar = False
+    algorithm = "astar_delaunay"
     process_all = False
     play = play_filename[:-4]
     inpath = inputpath+"/receiving_plays"
     outputpath = 'results'
     try:
-        opts, args = getopt.getopt(argv,"hap:o:i:l:m:q",["help","all","playid=","outpath=","inpath=","logpath=","mem=","astar_old"])
+        opts, args = getopt.getopt(argv,"hap:o:i:l:m:q:",["help","all","playid=","outpath=","inpath=","logpath=","mem=","algorithm="])
     except getopt.GetoptError:
-        print('processing_functions.py [-a | -p <play_id>] -i <input_path> -o <output_path> -l <logfile_full_filepath> -m <percentage_of_mem_usage_allowed> -q')
+        print('processing_functions.py [-a | -p <play_id>] -i <input_path> -o <output_path> -l <logfile_full_filepath> -m <percentage_of_mem_usage_allowed> -q <algorithm_type>')
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
-            print('processing_functions.py [-a | -p <play_id>] -i <input_path> -o <output_path> -l <logfile_full_filepath> -m <percentage_of_mem_usage_allowed> -q')
+            print('processing_functions.py [-a | -p <play_id>] -i <input_path> -o <output_path> -l <logfile_full_filepath> -m <percentage_of_mem_usage_allowed> -q <algorithm_type>')
             sys.exit()
         elif opt in ("-a", "--all"):
             if opt in ("-p", "--playid"):
@@ -113,8 +117,8 @@ def main(argv):
             logpath = arg
         elif opt in ("-m", "--mem"):
             get_memory(arg)
-        elif opt in ("-q", "--astar_old"):
-            oastar = True
+        elif opt in ("-q", "--algorithm"):
+            algorithm = arg
     if logpath is not None:
         old_stdout = sys.stdout
         if logpath.endswith(".log"):
@@ -126,9 +130,9 @@ def main(argv):
         sys.stdout = log_file
     create_new_folder(outputpath)
     if process_all:
-        process_all_plays(inpath, outputpath+"/", heuristic=heuristic_func, old_astar=oastar)
+        process_all_plays(inpath, outputpath+"/", heuristic=heuristic_func, algorithm=algorithm)
     else:
-        process_play(inpath+"/"+play+".csv", play, outputpath, f"result_{play}", heuristic=heuristic_func, old_astar=oastar)
+        process_play(inpath+"/"+play+".csv", play, outputpath, f"result_{play}", heuristic=heuristic_func, algorithm=algorithm)
     if logpath is not None:
         print("Stopped printing to logfile")
         sys.stdout = old_stdout
