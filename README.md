@@ -2,7 +2,7 @@
 
 Coursework for the Applied Data Science unit analysing, inferring and visualising the NFL Big Data Bowl 2022 Comptetition data.
 
-The NFL Big Data Bowl 2022 data is here [], and the Madden 2021 data is here []. This project aims to analyse Punt Returns, specifically the
+The NFL Big Data Bowl 2022 data is here [https://www.kaggle.com/c/nfl-big-data-bowl-2022], and the Madden 2021 data is here [https://www.kaggle.com/datasets/dtrade84/madden-21-player-ratings]. This project aims to analyse Punt Returns, specifically the
 Punt Returner's path, the method used to calculate this, and how it can be optimised.
 
 ### The repo contains the following notebooks:
