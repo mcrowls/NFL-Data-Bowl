@@ -7,91 +7,12 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn
+from frechetdist import frdist
 
-
-def drawPitch(width, height, color="w"):
-    fig = plt.figure()
-    ax = plt.axes(xlim=(-10, width + 30), ylim=(-15, height + 5))
-    plt.axis('off')
-
-    # Grass around pitch
-    rect = patches.Rectangle((-10, -5), width + 40, height + 10, linewidth=1, facecolor='#3f995b', capstyle='round')
-    ax.add_patch(rect)
-    ###################
-
-    # Pitch boundaries
-    rect = plt.Rectangle((0, 0), width + 20, height, ec=color, fc="None", lw=2)
-    ax.add_patch(rect)
-    ###################
-    # vertical lines - every 5 yards
-    for i in range(21):
-        plt.plot([10 + 5 * i, 10 + 5 * i], [0, height], c="w", lw=2)
-    ###################
-
-    # distance markers - every 10 yards
-    for yards in range(10, width, 10):
-        yards_text = yards if yards <= width / 2 else width - yards
-        # top markers
-        plt.text(10 + yards - 2, height - 7.5, yards_text, size=20, c="w", weight="bold")
-        # botoom markers
-        plt.text(10 + yards - 2, 7.5, yards_text, size=20, c="w", weight="bold", rotation=180)
-    ###################
-        # yards markers - every yard
-        # bottom markers
-        for x in range(20):
-            for j in range(1, 5):
-                plt.plot([10 + x * 5 + j, 10 + x * 5 + j], [1, 3], color="w", lw=3)
-
-        # top markers
-        for x in range(20):
-            for j in range(1, 5):
-                plt.plot([10 + x * 5 + j, 10 + x * 5 + j], [height - 1, height - 3], color="w", lw=3)
-
-        # middle bottom markers
-        y = (height - 18.5) / 2
-        for x in range(20):
-            for j in range(1, 5):
-                plt.plot([10 + x * 5 + j, 10 + x * 5 + j], [y, y + 2], color="w", lw=3)
-    # middle top markers
-    for x in range(20):
-        for j in range(1, 5):
-            plt.plot([10 + x * 5 + j, 10 + x * 5 + j], [height - y, height - y - 2], color="w", lw=3)
-    ###################
-
-    # draw home end zone
-    plt.text(2.5, (height - 10) / 2, "HOME", size=40, c="w", weight="bold", rotation=90)
-    rect = plt.Rectangle((0, 0), 10, height, ec=color, fc="#0064dc", lw=2)
-    ax.add_patch(rect)
-
-    # draw away end zone
-    plt.text(112.5, (height - 10) / 2, "AWAY", size=40, c="w", weight="bold", rotation=-90)
-    rect = plt.Rectangle((width + 10, 0), 10, height, ec=color, fc="#c80014", lw=2)
-    ax.add_patch(rect)
-    ###################
-
-    # draw extra spot point
-    # left
-    y = (height - 3) / 2
-    plt.plot([10 + 2, 10 + 2], [y, y + 3], c="w", lw=2)
-
-    # right
-    plt.plot([width + 10 - 2, width + 10 - 2], [y, y + 3], c="w", lw=2)
-    ###################
-
-    # draw goalpost
-    goal_width = 6  # yards
-    y = (height - goal_width) / 2
-    # left
-    plt.plot([0, 0], [y, y + goal_width], "-", c="y", lw=10, ms=20)
-    # right
-    plt.plot([width + 20, width + 20], [y, y + goal_width], "-", c="y", lw=10, ms=20)
-
-    return fig, ax
 
 
 def distance(loc1, loc2):
     return np.sqrt((loc2[0] - loc1[0])**2 + (loc2[1] - loc1[1])**2)
-
 
 def returner(csv, frame):
     df = csv[csv['frameId'] == frame]
@@ -107,7 +28,6 @@ def returner(csv, frame):
             distances.append(distance_to_ball)
     min_distance_index = distances.index(np.min(distances))
     return np.unique([df['displayName']])[min_distance_index]
-
 
 def extract_one_game(game):
     home = {}
@@ -127,7 +47,6 @@ def extract_one_game(game):
     balls = list(zip(ball_df.x.tolist(), ball_df.y.tolist()))
     return home, away, balls
 
-
 def get_pixels(pitch_size, grid_size):
     xs = np.linspace(0, pitch_size[0], grid_size[0])
     ys = np.linspace(0, pitch_size[1], grid_size[1])
@@ -141,14 +60,12 @@ def get_pixels(pitch_size, grid_size):
         pixels.append(row)
     return pixels, x_spacing, y_spacing
 
-
 def get_closest(point, points):
     # Want to add in speed
     distances = []
     for other_point in points:
         distances.append(np.sqrt((point[0] - other_point[0])**2 + (point[1] - other_point[1])**2))
     return distances.index(np.min(distances))
-
 
 def assign_pixel_values(frame, home, away, pixels):
     # print(np.shape(pixels))
@@ -169,7 +86,6 @@ def assign_pixel_values(frame, home, away, pixels):
                 values[row_index][pixel_index] = 1
     return values
 
-
 def get_neighbours(pixel, x_spacing, y_spacing):
     neighbours = []
     if pixel[1] + y_spacing < 53.3:
@@ -181,7 +97,6 @@ def get_neighbours(pixel, x_spacing, y_spacing):
     neighbours.append([pixel[0] - x_spacing, pixel[1]])
     return neighbours
 
-
 def measure_distance_to_blue(pixel, pixels, vector, pixel_values):
     value = pixel_values[int(pixel[0]-0.5)][int(pixel[1]-0.5)]
     truth = True
@@ -189,7 +104,10 @@ def measure_distance_to_blue(pixel, pixels, vector, pixel_values):
     while truth == True:
         next_pixel = [pixel[0] + vector[0], pixel[1] + vector[1]]
         indicies = [int(next_pixel[0] - 0.5), int(next_pixel[1] - 0.5)]
-        if pixel_values[indicies[0]][indicies[1]] == value:
+        # print(indicies)
+        if 0 > indicies[0] or indicies[0] >= 120 or 0 > indicies[1] or indicies[1] >= 52:
+            truth = False
+        elif pixel_values[indicies[0]][indicies[1]] == value:
             pixel = next_pixel
             counter += 1
         else:
@@ -197,10 +115,12 @@ def measure_distance_to_blue(pixel, pixels, vector, pixel_values):
         # if pixel_values
     return counter
 
-
-def choose_direction(pixel, pixels, pixel_values):
+def choose_direction(pixel, pixels, pixel_values, sideways_direction):
     sizes = []
-    vectors = [[-1, 1], [-1, 0], [-1, -1]]
+    if sideways_direction == 0:
+        vectors = [[-1, 1], [-1, 0], [-1, -1]]
+    else:
+        vectors = [[-1, 1], [-1, 0], [-1, -1], sideways_direction]
     for array in vectors:
         sizes.append(measure_distance_to_blue(pixel, pixels, array, pixel_values))
     if np.sum(sizes) == 0:
@@ -209,65 +129,182 @@ def choose_direction(pixel, pixels, pixel_values):
         index = sizes.index(np.max(sizes))
         return vectors[index]
 
+def which_sideways_direction(start_pixel, pixel_values):
+    vectors = [[0, -1], [0, 1]]
+    leftover_pixels = pixel_values[:int(start_pixel[0])]
+    pixel_value = pixel_values[int(start_pixel[0])][int(start_pixel[1])]
+    array_left = []
+    array_right = []
+    for i in range(np.shape(leftover_pixels)[0]):
+        array_left.append(leftover_pixels[i][:int(start_pixel[1])])
+        array_right.append(leftover_pixels[i][int(start_pixel[1]):])
+    if np.size(array_left) == 0:
+        return [0, 1]
+    elif np.size(array_right) == 0:
+        return [0, -1]
+    left_fraction = np.count_nonzero(array_left == pixel_value)/np.size(array_left)
+    right_fraction = np.count_nonzero(array_right == pixel_value)/np.size(array_right)
+    return vectors[[left_fraction, right_fraction].index(np.max([left_fraction, right_fraction]))]
 
+def find_critical_sideways_point(start, points):
+    truth = True
+    i = 3
+    while truth == True:
+        # print(np.shape(points)[0])
+        # print(-start)
+        # print(-i)
+        if i > np.shape(points)[0]:
+            return i - 1
+        if points[-start][0] == points[-i][0]:
+            i += 1
+        else:
+            point_index = i
+            truth = False
+            return point_index + 1
 
-def a_star_search(ball_position, pixels, pixel_values, x_spacing, y_spacing):
-    if round(ball_position[1]) > ball_position[1]:
+def ch_search(ball_position, returner_value, pixels, pixel_values, x_spacing, y_spacing):
+    x = round(ball_position[0]) - 0.5
+    if round(ball_position[1]) > ball_position[1] or ball_position[1] > 52.5:
         y = round(ball_position[1]) - 0.5
     else:
         y = round(ball_position[1]) + 0.5
-    x = round(ball_position[0]) + 0.5
+    if pixel_values[int(x)-2][int(y)] != returner_value:
+        x = round(ball_position[0]) + 0.5
     starting_node = [x, y]
+    sideways_direction = which_sideways_direction(starting_node, pixel_values)
     truth = True
     points = []
+    counter = 0
     while truth == True:
+        sideways = False
         points.append(starting_node)
-        direction = choose_direction(starting_node, pixels, pixel_values)
+        direction = choose_direction(starting_node, pixels, pixel_values, sideways_direction)
         if direction == [0, 0]:
-            truth = False
-        starting_node = [starting_node[0] + direction[0], starting_node[1] + direction[1]]
+            if np.shape(points)[0] > 3 and points[-2][0] == points[-3][0]:
+                counter += 1
+                index = find_critical_sideways_point(2, points)
+                starting_node = points[-index+2]
+                points = points[:-index+2]
+                if counter < 2:
+                    sideways_direction = [sideways_direction[0], -sideways_direction[1]]
+                else:
+                    sideways_direction = 0
+                sideways == True
+            else:
+                truth = False
+        if sideways == False:
+            starting_node = [starting_node[0] + direction[0], starting_node[1] + direction[1]]
     return points
 
+def yards_gained(returner):
+    return abs(returner[-1][0] - returner[0][0])
 
-csv = pd.read_csv('data/Receiving_Plays/play116-game2021010301.csv')
-home, away, balls = extract_one_game(csv)
+def find_n_yard_point(array, n):
+    point1 = array[-2]
+    point2 = array[-1]
+    if point2[0] - point1[0] == 0:
+        if array[0][0] > array[-1][0]:
+            return [array[0][0] - n, array[-1][1]]
+        else:
+            return [array[0][0] + n, array[-1][0]]
+    gradient = (point2[1] - point1[1])/(point2[0] - point1[0])
+    intercept = point2[1] - gradient*point2[0]
+    if array[0][0] > array[-1][0]:
+        return [array[0][0] - n, gradient*(array[0][0] - n) + intercept]
+    else:
+        return [array[0][0] + n, gradient*(array[0][0] + n) + intercept]
+
+def add_points_til_n(array, n):
+    if len(array) == 1:
+        return array
+    starting_point = array[0]
+    relevant_points = [array[0]]
+    i = 1
+    truth = False
+    while truth == False:
+        if abs(array[i][0] - starting_point[0]) < n:
+            relevant_points.append(array[i])
+        else:
+            relevant_points.append(array[i])
+            truth = True
+        i += 1
+        #If the path is less than 5 yards in total, need to stop
+        if i == len(array):
+            truth = True
+    return relevant_points
+
+def path_interpolate(array, n):
+    points = []
+    # print(n/len(array))
+    for i in range(len(array)-1):
+        xs = np.linspace(array[i][0], array[i+1][0], int(n/(len(array)-1)))
+        ys = np.linspace(array[i][1], array[i+1][1], int(n/(len(array)-1)))
+        for j in range(len(xs)):
+            points.append([xs[j], ys[j]])
+    return points
+
+def remove_elements(array):
+    new_array = []
+    spacing = int(len(array)/10)
+    for i in range(spacing):
+        new_array.append(array[i*10])
+    return new_array
 
 
-receive_frame = csv[csv['event'] == 'punt_received']['frameId'].iloc[0]
-punt_returner = returner(csv, receive_frame)
-returner_pos = csv[csv['displayName'] == punt_returner][receive_frame:]
-returner_pos = list(zip(returner_pos.x.tolist(), returner_pos.y.tolist()))
+def calc_frechet_distance(actual_path, predicted_path, n):
+    # print(actual_path[-1])
+    actual_path = add_points_til_n(actual_path, n)
+    predicted_path = add_points_til_n(predicted_path, n)
+    # print(predicted_path)
+    #actual_path[-1] = find_five_point(actual_path)
+    # predicted_path[-1] = find_n_yard_point(predicted_path, n)
+    # actual_path[-1] = find_n_yard_point(actual_path, n)
+    # print()
+    num = np.lcm(len(predicted_path)-1, len(actual_path)-1)
+    predicted_path = path_interpolate(predicted_path, num)
+    actual_path = path_interpolate(actual_path, num)
+    if len(predicted_path) > 500:
+        predicted_path = remove_elements(predicted_path)
+        actual_path = remove_elements(actual_path)
+    frdist_val = frdist(predicted_path, actual_path)
+    return frdist_val
 
-# pixels_array = []
-pixels, x_spacing, y_spacing = get_pixels([120, 53], [121, 54])
-# print(pixels)
-# get_neighbours(pixels[0][0], x_spacing, y_spacing)
-# for frame in range(receive_frame+1, receive_frame+10):
-frame = receive_frame + 5
-pixel_values = assign_pixel_values(frame, home, away, pixels)
-    # pixels_array.append(pixel_values)
 
-# print(pixels_array)
+def fraction_of_pitch(returner, pixel_values, last_defender):
+    if returner[0][0] >= 119.5:
+        index1 = round(returner[0][0]) - 1
+    else:
+        index1 = round(returner[0][0])
+    if returner[0][1] >= 52.5:
+        index2 = round(returner[0][1]) - 1
+    else:
+        index2 = round(returner[0][1])
+    ret_team_value = pixel_values[index1][index2]
+    limited_pixels = pixel_values[last_defender:index1]
+    count = np.count_nonzero(limited_pixels == ret_team_value)
+    return count/np.size(limited_pixels), ret_team_value
 
-fig, ax = plt.subplots()
+def pitch_control(csv):
+    initial_pos = []
+    home, away, balls = extract_one_game(csv)
+    for home_player, away_player in zip(home, away):
+        h_pos = home[home_player][0][0]
+        a_pos = away[away_player][0][0]
+        initial_pos.append(h_pos)
+        initial_pos.append(a_pos)
+    last_def = int(np.min(initial_pos))
+    receive_frame = csv[csv['event'] == 'punt_received']['frameId'].iloc[0]
+    punt_returner = returner(csv, receive_frame)
+    returner_pos = csv[csv['displayName'] == punt_returner][receive_frame:]
+    returner_pos = list(zip(returner_pos.x.tolist(), returner_pos.y.tolist()))
 
-points = a_star_search(balls[frame], pixels, pixel_values, x_spacing, y_spacing)
-xs = []
-ys = []
-for point in points:
-    xs.append(point[0])
-    ys.append(point[1])
-ax.plot(xs, ys, 'k-')
-ax.scatter(points[-1][0], points[-1][1], marker='x', c='r')
-
-ax.scatter(balls[frame][0], balls[frame][1], c='k', s=0.9)
-# print(pixels_array[frame])
-# pixel_values = assign_pixel_values(frame, home, away, pixels)
-for player in home:
-    ax.scatter(home[player][frame][0], home[player][frame][1], c='b')
-for player in away:
-    ax.scatter(away[player][frame][0], away[player][frame][1], c='r')
-# ax.scatter(returner_pos[frame][0], returner_pos[frame][1], c='pink', s=0.8)
-image = ax.imshow(np.flipud(pixel_values.T), extent=(0, 120, 0, 53), cmap='bwr', alpha=0.4)
-
-plt.show()
+    pixels, x_spacing, y_spacing = get_pixels([120, 53], [121, 54])
+    frame = receive_frame
+    pixel_values = assign_pixel_values(frame, home, away, pixels)
+    pitch_fraction, value = fraction_of_pitch(returner_pos, pixel_values, last_def)
+    yards = yards_gained(returner_pos)
+    points = ch_search(balls[frame], value, pixels, pixel_values, x_spacing, y_spacing)
+    predicted_yards = yards_gained(points)
+    frechet = calc_frechet_distance(returner_pos, points, 5)
+    return returner_pos, points, home, away, frame, pixels, pixel_values, frechet, yards, pitch_fraction, predicted_yards
+    
