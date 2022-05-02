@@ -44,7 +44,7 @@ def get_memory():
 """
 Get yardage and frechet distance for one play
 """
-def process_play(playpath_,playname,filename="results_plays", outpath="results/", heuristic=optimal_path_heuristic, algorithm="astar_delaunay"):
+def process_play(playpath_,playname,filename="results_plays", outpath="results/", heuristic=optimal_path_heuristic, algorithm="astar_delaunay", save=False):
     csv = pd.read_csv(playpath_)
     try:
         if algorithm == "pitch_control":
@@ -55,14 +55,16 @@ def process_play(playpath_,playname,filename="results_plays", outpath="results/"
             all_windows,optimal_points,play_direction,frechets,yardage_gained = process_frames(csv, True, True, heuristic=heuristic, algorithm=algorithm)
         median_deviation = np.median(np.array(frechets))
         mean_deviation = np.mean(np.array(frechets))
-        d = {'play':[playname],'yardage':[yardage_gained],'median_deviation':median_deviation,'mean_deviation':mean_deviation, 'algorithm':algorithm}
-        df = pd.DataFrame(data=d)
-        df.to_csv(outpath+filename+".csv", mode='a')
+        if save:
+            d = {'play':[playname],'yardage':[yardage_gained],'median_deviation':median_deviation,'mean_deviation':mean_deviation, 'algorithm':algorithm}
+            df = pd.DataFrame(data=d)
+            df.to_csv(outpath+filename+".csv", mode='a')
     #If the play crashes just output nothing
     except Exception as e:
-        d = {'play':[playname],'yardage':None,'median_deviation':None,'mean_deviation':None, 'algorithm':None}
-        df = pd.DataFrame(data=d)
-        df.to_csv(outpath+filename+".csv", mode='a')
+        if save:
+            d = {'play':[playname],'yardage':None,'median_deviation':None,'mean_deviation':None, 'algorithm':None}
+            df = pd.DataFrame(data=d)
+            df.to_csv(outpath+filename+".csv", mode='a')
     return df
 
 def process_play_lam(play, inpath=inputpath+"/receiving_plays", filename="results_plays", outpath="results/", algorithm="astar_delaunay"):
@@ -82,7 +84,6 @@ def process_all_plays(inpath=inputpath+"/receiving_plays", outpath="results/", h
     if multithread:
         pool = multiprocessing.Pool(num_threads)
         results = pool.map(partial(process_play_lam, inpath=inpath+"/", filename="results_plays", outpath=outpath, algorithm=algorithm), os.listdir(inpath))
-        print(results)
         df = pd.DataFrame(data=results)
         df.to_csv(f'results_plays_{algorithm}.csv', mode='a')
     else:
