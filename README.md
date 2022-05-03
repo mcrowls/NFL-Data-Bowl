@@ -42,9 +42,9 @@ processing_functions.py [-a | -p <play_id>] -i <input_path> -o <output_path> -l 
 visualisation_functions.py -p <play_id> -i <input_path> -o <output_path> -v <"new"/"old"/"funcanim"> -q <algorithm_type>
 ```
 
-![Optimal Path for Frame 3 from play116-game2021010301 using A*](res/-p play116-game2021010301 -v new -q astar.png "Optimal Path of Frame 3 in play116-game2021010301 using A*")
-![Optimal Path for Frame 3 from play116-game2021010301 using ModA* & Delaunay Triangulation](res/-p play116-game2021010301 -v new -q astar_delaunay.png "Optimal Path of Frame 3 in play116-game2021010301 using ModA* & Delaunay Triangulation")
-![Optimal Path for play116-game2021010301 using Pitch Control](res/-p play116-game2021010301 -v new -q pitch_control.png "Optimal Path in play116-game2021010301 using Pitch Control")
+![Optimal Path for Frame 3 from play116-game2021010301 using A*](./res/-p play116-game2021010301 -v new -q astar.png)
+![Optimal Path for Frame 3 from play116-game2021010301 using ModA* & Delaunay Triangulation](./res/-p play116-game2021010301 -v new -q astar_delaunay.png)
+![Optimal Path for play116-game2021010301 using Pitch Control](./res/-p play116-game2021010301 -v new -q pitch_control.png)
 
 
 
