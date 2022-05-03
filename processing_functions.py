@@ -128,7 +128,10 @@ def main(argv):
         elif opt in ("-m", "--mem"):
             memory_limit(arg)
         elif opt in ("-q", "--algorithm"):
-            algorithm = arg
+            if arg in {"astar", "astar_delaunay", "pitch_control"}:
+                algorithm = arg
+            else:
+                raise ValueError(f'Error: argument -q / --algorithm must be one of "astar", "astar_delaunay", "pitch_control"')
     if logpath is not None:
         old_stdout = sys.stdout
         if logpath.endswith(".log"):
