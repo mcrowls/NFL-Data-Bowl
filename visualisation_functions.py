@@ -194,7 +194,7 @@ def process_frames(csv, delaunay=False, print_status=False, heuristic=lambda c, 
 
         #Calculate the optimal path through the windows
         windows = create_window_neighbors(windows)
-        optimal_path = get_optimal_path(windows,[returner_pos[frame][0],returner_pos[frame][1]],[10,25], returner_speed, heuristic, old_astar)
+        optimal_path = get_optimal_path(windows,[returner_pos[frame][0],returner_pos[frame][1]],[10,25], returner_speed, heuristic, algorithm)
         optimal_path_points = []
         for window in optimal_path:
             optimal_path_points.append(window.optimal_point)
@@ -559,9 +559,12 @@ def main(argv):
         elif opt in ("-i", "--inpath"):
             inpath = arg
         elif opt in ("-q", "--algorithm"):
-            algorithm = arg
+            if arg in {"astar", "astar_delaunay", "pitch_control"}:
+                algorithm = arg
+            else:
+                raise ValueError(f'Error: argument -q / --algorithm must be one of "astar", "astar_delaunay", "pitch_control"')
         elif opt in ("-v", "--visfunc"):
-            if arg == "new" or arg == "old" or arg == "funcanim":
+            if arg in {"new", "old", "funcanim"}:
                 vis_func = arg
             else:
                 raise ValueError("Error: --visfunc must be 'new', 'old' or 'funcanim'")

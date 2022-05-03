@@ -3,7 +3,8 @@
 Coursework for the Applied Data Science unit analysing, inferring and visualising the NFL Big Data Bowl 2022 Comptetition data.
 
 The NFL Big Data Bowl 2022 data is here [https://www.kaggle.com/c/nfl-big-data-bowl-2022], and the Madden 2021 data is here [https://www.kaggle.com/datasets/dtrade84/madden-21-player-ratings]. This project aims to analyse Punt Returns, specifically the
-Punt Returner's path, the method used to calculate this, and how it can be optimised.
+Punt Returner's path, the method used to calculate this, and how it can be optimised. 
+We use three methods to create an optimal path for the Punt Returner; Pitch Control, and with the Delaunay Triangulations classic A* Search and Mod(ified) A*.
 
 ### The repo contains the following notebooks:
 
@@ -41,7 +42,13 @@ processing_functions.py [-a | -p <play_id>] -i <input_path> -o <output_path> -l 
 visualisation_functions.py -p <play_id> -i <input_path> -o <output_path> -v <"new"/"old"/"funcanim"> -q <algorithm_type>
 ```
 
-Global variables, input/output paths and defaults for command-line options can be changed in helpers.py:
+![Optimal Path for Frame 3 from play116-game2021010301 using A*](res/-p play116-game2021010301 -v new -q astar.png "Optimal Path of Frame 3 in play116-game2021010301 using A*")
+![Optimal Path for Frame 3 from play116-game2021010301 using ModA* & Delaunay Triangulation](res/-p play116-game2021010301 -v new -q astar_delaunay.png "Optimal Path of Frame 3 in play116-game2021010301 using ModA* & Delaunay Triangulation")
+![Optimal Path for play116-game2021010301 using Pitch Control](res/-p play116-game2021010301 -v new -q pitch_control.png "Optimal Path in play116-game2021010301 using Pitch Control")
+
+
+
+### Global variables, input/output paths and defaults for command-line options can be changed in helpers.py:
 
 ```py
 """# Global Variables / Paths"""
@@ -68,4 +75,10 @@ pip install -U jupyter_console
 pip install -U ipywidgets
 pip install -U ffmpeg-python
 jupyter nbextension enable --py widgetsnbextension
+```
+
+### There is a conda environment which can be activated via environment.yml; use the following commands to setup the environment:
+
+```py
+conda env create --name <env_name> --file=environments.yml
 ```

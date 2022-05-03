@@ -4,9 +4,7 @@ channels:
 dependencies:
   - conda
   - python=3.8
-  - menuinst
   - console_shortcut
-  - powershell_shortcut
   - conda-env
   - conda-build
   - conda-verify
@@ -15,3 +13,5 @@ dependencies:
   - anaconda-navigator==2.1.2
   - navigator-updater
 prefix: C:\ProgramData\Anaconda3
+# - menuinst
+# - powershell_shortcut
