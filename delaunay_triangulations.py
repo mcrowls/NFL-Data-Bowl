@@ -525,8 +525,8 @@ def get_heuristic(current_node,neighbor,end,return_speed,heuristic="optimal", al
         neighbor.f = neighbor.g + neighbor.h
     else:
         h_g = h
-        neighbor.g = h_g(neighbor.optimal_point, current_node.optimal_point, return_speed)*sc
-        #neighbor.g = current_node.g + neighbor.g
+        neighbor.g = h_g(neighbor.optimal_point, current_node.optimal_point, return_speed)*sc(neighbor, current_node)
+        neighbor.g = current_node.g + neighbor.g
         
         #h is the distance from the neighbor node to the end, only in the x direction
         h_f = lambda c, d: np.linalg.norm(c[0] - d[0])

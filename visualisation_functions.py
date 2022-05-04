@@ -258,7 +258,7 @@ def animate_return(csv, delaunay=False, print_status=False, use_funcanim=False, 
         if delaunay:
             p = ax.scatter(lines[frame][:, 0], lines[frame][:, 1], c=times[frame], cmap="YlOrRd", marker="s", s=5, zorder=15)
         
-        plt.savefig(outpath+f"{playname}_frame{frame}_{algorithm}.png", format="png")
+        plt.savefig(outpath+f"{playname}_heur={heuristic}_alg={algorithm}_scoeff={speed_coefficient}/"+f"{playname}_frame{frame}.png", format="png")
         if frame < size - 1:
             plt.pause(0.20)
             if delaunay:
@@ -276,7 +276,7 @@ def animate_return(csv, delaunay=False, print_status=False, use_funcanim=False, 
             #for n in neighborlines:
                 #n[0].remove()
 
-    plt.savefig(outpath+f"{playname}_{algorithm}.png", format="png")
+    plt.savefig(outpath+f"{playname}_heur={heuristic}_alg={algorithm}_scoeff={speed_coefficient}/"+f"{playname}_end.png", format="png")
     plt.show()
 
 def animate_one_play(home, away, balls, return_line, lines,times, play_direction, outpath=visoutputpath, playname=play_filename):
@@ -378,7 +378,7 @@ def animate_one_play(home, away, balls, return_line, lines,times, play_direction
     anim.save(outpath+playname+".gif", writer=writergif)
     return HTML(anim.to_html5_video())
 
-def draw_return_and_prediction(returner, predicted_path, home, away, frame, pixels, pixel_values, outpath=visoutputpath, playname=play_filename, algorithm="astar_delaunay"):
+def draw_return_and_prediction(returner, predicted_path, home, away, frame, pixels, pixel_values, outpath=visoutputpath, playname=play_filename, heuristic="optimal", algorithm="astar_delaunay", speed_coefficient="optimal"):
     fig, ax = plt.subplots(figsize = (18,10))
     ax.scatter(returner[0][0], returner[0][1], c='k', zorder=5, label='Returner')
 
@@ -430,18 +430,19 @@ def draw_return_and_prediction(returner, predicted_path, home, away, frame, pixe
     # drawPitch(ax, 120, 53)
 
     ax.legend(loc='upper right')
-    plt.savefig(outpath+f"{playname}_frame{frame}_{algorithm}.png", format="png")
+    plt.savefig(outpath+f"{playname}_heur={heuristic}_alg={algorithm}_scoeff={speed_coefficient}/"+f"{playname}_frame{frame}.png", format="png")
     plt.show()
     return fig, ax
 
-def graph_frechet(frechets, yards):
+def graph_frechet(frechets, yards, outpath):
     plt.scatter(frechets, yards, c='green')
     plt.xlabel('Frechet Distance between the Predicted and Actual path')
     plt.ylabel('Yards Gained')
+    plt.savefig(outpath+".png")
     plt.show()
 
-
 def visualise_play(inpath=inputpath+"receiving_plays/", outpath=visoutputpath, playname=play_filename[:-4], changeFigsize=False, heuristic='optimal', algorithm="astar_delaunay", speed_coefficient='optimal'):
+    create_new_folder(outpath+f"{playname}_heur={heuristic}_alg={algorithm}_scoeff={speed_coefficient}")
     if changeFigsize:
         plt.rcParams['figure.figsize'] = [18, 10]
     csv = pd.read_csv(inpath+playname+".csv")
@@ -453,7 +454,7 @@ def visualise_play(inpath=inputpath+"receiving_plays/", outpath=visoutputpath, p
 
 # Draw the delaunay triangles frame by frame
 def visualise_play_delaunay(inpath=inputpath+"receiving_plays/", outpath=visoutputpath, playname=play_filename[:-4], size=40, heuristic='optimal', algorithm="astar_delaunay", speed_coefficient='optimal'):
-    create_new_folder(outpath)
+    create_new_folder(outpath+f"{playname}_heur={heuristic}_alg={algorithm}_scoeff={speed_coefficient}")
     csv = pd.read_csv(inpath+playname+".csv")
     receive_frame = csv[csv['event'] == 'punt_received']['frameId'].iloc[0]
     punt_returner = returner(csv, receive_frame)
@@ -505,7 +506,7 @@ def visualise_play_delaunay(inpath=inputpath+"receiving_plays/", outpath=visoutp
     plt.show()
 
 def visualise_play_FuncAnimation(inpath=inputpath+"receiving_plays/", outpath=visoutputpath, playname=play_filename[:-4], heuristic='optimal', algorithm="astar_delaunay", speed_coefficient='optimal'):
-    create_new_folder(outpath)
+    create_new_folder(outpath+f"{playname}_heur={heuristic}_alg={algorithm}_scoeff={speed_coefficient}")
     plt.rcParams['figure.figsize'] = [18, 10]
     anim_values = []
     csv = pd.read_csv(inpath+playname+".csv")
