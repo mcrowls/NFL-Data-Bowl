@@ -62,7 +62,7 @@ def process_play(playpath_,playname,filename="results_plays", outpath="results/"
     #If the play crashes just output nothing
     except Exception as e:
         if save:
-            d = {'play':[playname],'yardage':None,'median_deviation':None,'mean_deviation':None, 'heuristic':heuristic, 'algorithm':algorithm, 'speed_coefficient':speed_coefficient}
+            d = {'play':[playname],'yardage':0,'median_deviation':0,'mean_deviation':0, 'heuristic':heuristic, 'algorithm':algorithm, 'speed_coefficient':speed_coefficient}
             df = pd.DataFrame(data=d)
             df.to_csv(outpath+filename+".csv", mode='a')
     return df
@@ -76,20 +76,16 @@ def process_play_lam(play, inpath=inputpath+"/receiving_plays", filename="result
     return process_play(inpath+"/"+play,play,filename,outpath, heuristic=heuristic, algorithm=algorithm, speed_coefficient=speed_coefficient)
 
 def process_all_plays(inpath=inputpath+"/receiving_plays", outpath="results/", heuristic='optimal', algorithm="astar_delaunay", speed_coefficient="optimal", num_procs=16):
-    if not os.path.exists(outpath):
-        file = open(outpath,"w")
-        file.write("id,play,yardage,median_deviation,mean_deviation,algorithm\n")
-        file.close()
     if multithread:
         pool = multiprocessing.Pool(num_procs)
         results = pool.map(partial(process_play_lam, inpath=inpath+"/", filename=f"results_plays_heur={heuristic}_alg={algorithm}_scoeff={speed_coefficient}", outpath=outpath, heuristic=heuristic, algorithm=algorithm, speed_coefficient=speed_coefficient), os.listdir(inpath))
         df = pd.DataFrame(data=results)
-        df.to_csv(f'results_plays_{algorithm}.csv', mode='a')
+        df.to_csv(f"results_plays_heur={heuristic}_alg={algorithm}_scoeff={speed_coefficient}.csv", mode='a', header=True)
     else:
         results = []
         for p in os.listdir(inpath):
             results.append(process_play_lam(p, inpath=inpath+"/", filename=f"results_plays_heur={heuristic}_alg={algorithm}_scoeff={speed_coefficient}", outpath=outpath, heuristic=heuristic, algorithm=algorithm, speed_coefficient=speed_coefficient))
-        pd.concat(results).to_csv(f'results_plays_{algorithm}.csv')
+        pd.concat(results).to_csv(f"results_plays_heur={heuristic}_alg={algorithm}_scoeff={speed_coefficient}.csv", header=True)
 
 def main(argv):
     logpath = None
