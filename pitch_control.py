@@ -7,12 +7,8 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn
+from helpers import get_distance
 from frechetdist import frdist
-
-
-
-def distance(loc1, loc2):
-    return np.sqrt((loc2[0] - loc1[0])**2 + (loc2[1] - loc1[1])**2)
 
 def returner(csv, frame):
     df = csv[csv['frameId'] == frame]
@@ -24,7 +20,7 @@ def returner(csv, frame):
             distances.append(100000)
         else:
             player_location = [df[df['displayName'] == player]['x'].iloc[0], df[df['displayName'] == player]['y'].iloc[0]]
-            distance_to_ball = distance(football_location, player_location)
+            distance_to_ball = get_distance(football_location, player_location)
             distances.append(distance_to_ball)
     min_distance_index = distances.index(np.min(distances))
     return np.unique([df['displayName']])[min_distance_index]
