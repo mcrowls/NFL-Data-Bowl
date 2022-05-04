@@ -1,6 +1,6 @@
 from operator import index
 from re import M
-from turtle import up, update
+from turtle import speed, up, update
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -9,7 +9,7 @@ from scipy.spatial import Delaunay
 from skspatial.objects import Line
 from skspatial.objects import Point
 import math
-from helpers import avg_player_speed
+from helpers import optimal_speed_coefficient, speed_coefficient_func, optimal_path_heuristic, heuristic_func, avg_player_speed, get_distance, get_angle
 import statistics
 from players import Player
 from frechetdist import frdist
@@ -99,14 +99,6 @@ def frechet_distance(actual_path, predicted_path):
         actual_path = actual_path[:-difference]
     return frdist(actual_path, predicted_path)
 
-def distance(loc1, loc2):
-    return np.sqrt((loc2[0] - loc1[0])**2 + (loc2[1] - loc1[1])**2)
-
-def angle(point1, point2):
-    if (point2[0] - point1[0]) == 0:
-        return 0
-    return abs(np.arctan((point2[1] - point1[1])/(point2[0] - point1[0])))
-
 def returner(csv, frame):
     df = csv[csv['frameId'] == frame]
     football = df[df['displayName'] == 'football']
@@ -117,7 +109,7 @@ def returner(csv, frame):
             distances.append(100000)
         else:
             player_location = [df[df['displayName'] == player]['x'].iloc[0], df[df['displayName'] == player]['y'].iloc[0]]
-            distance_to_ball = distance(football_location, player_location)
+            distance_to_ball = get_distance(football_location, player_location)
             distances.append(distance_to_ball)
     min_distance_index = distances.index(np.min(distances))
     return np.unique([df['displayName']])[min_distance_index]
@@ -506,22 +498,40 @@ def boundary_windows(hull_points, returner_pos_x):
 
 # DEFAULT: np.linalg.norm(neighbor.optimal_point[0] - end[0])
 # OLD: np.linalg.norm(neighbor.optimal_point - end)/return_speed
-def get_heuristic(current_node,neighbor,end,return_speed,heuristic=lambda c, d: np.linalg.norm(c[0] - d[0]), algorithm="astar_delaunay"):
+def get_heuristic(current_node,neighbor,end,return_speed,heuristic="optimal", algorithm="astar_delaunay", speed_coefficient="optimal"):
+    if heuristic == "yardage":
+        h = lambda c, d: np.linalg.norm(c[0] - d[0])
+    elif heuristic == "optimal":
+        h = optimal_path_heuristic
+    elif heuristic == "euclidean":
+        h = lambda c, d: np.linalg.norm(c - d)
+    elif heuristic == "custom":
+        h = heuristic_func
+    else:
+        raise ValueError("Error: heuristic must be 'yardage', 'euclidean', 'optimal' or 'custom'")
+    if speed_coefficient == "optimal":
+        sc = optimal_speed_coefficient
+    elif heuristic == "custom":
+        sc = speed_coefficient_func
+    else:
+        raise ValueError("Error: speed_coefficient must be 'optimal' or 'custom'")
     if algorithm == "astar":
-        neighbor.g = (np.linalg.norm(neighbor.optimal_point - current_node.optimal_point)/return_speed)
+        h_g = lambda c, d, r: np.linalg.norm(c - d)/r
+        neighbor.g = h_g(neighbor.optimal_point, current_node.optimal_point, return_speed)
         neighbor.g = current_node.g + neighbor.g
         #h is the distance from the neighbor node to the end, only in the x direction
-        h_f = lambda c, d: np.linalg.norm(c - d)
-        neighbor.h = h_f(neighbor.optimal_point, end)
+        h_f = h_g
+        neighbor.h = h_f(neighbor.optimal_point, end, return_speed)
         neighbor.f = neighbor.g + neighbor.h
     else:
-        neighbor.g = (np.linalg.norm(neighbor.optimal_point - current_node.optimal_point)/return_speed)/neighbor.optimal_time
-        #print(angle(neighbor.optimal_point, current_node.optimal_point)/(2*math.pi))
-        neighbor.g = neighbor.g*angle(neighbor.optimal_point, current_node.optimal_point)
+        h_g = h
+        neighbor.g = h_g(neighbor.optimal_point, current_node.optimal_point, return_speed)*sc
         #neighbor.g = current_node.g + neighbor.g
         
         #h is the distance from the neighbor node to the end, only in the x direction
-        neighbor.h = heuristic(neighbor.optimal_point, end)#np.linalg.norm(neighbor.optimal_point[0] - end[0])
+        h_f = lambda c, d: np.linalg.norm(c[0] - d[0])
+        #h_f = heuristic
+        neighbor.h = h_f(neighbor.optimal_point, end)#np.linalg.norm(neighbor.optimal_point[0] - end[0])
         neighbor.f = neighbor.g/neighbor.h
     return neighbor
 
@@ -541,7 +551,7 @@ def reconstruct_path(current_node, end, start_window,carrier):
     the_path.append(Window(None,None,carrier))
     return the_path
 
-def get_optimal_path(windows,carrier,end,return_speed, heuristic=lambda c, d: np.linalg.norm(c[0] - d[0]), algorithm="astar_delaunay"):
+def get_optimal_path(windows,carrier,end,return_speed, heuristic='optimal', algorithm="astar_delaunay", speed_coefficient='optimal'):
     start_window = None
     #assuming end is an x y point, need to find the window closest to the end
     min_dist_end = float('inf')
@@ -578,7 +588,7 @@ def get_optimal_path(windows,carrier,end,return_speed, heuristic=lambda c, d: np
                 continue
 
             #if the neighbor is not in the closed list, need to calculate the heuristic
-            neighbor = get_heuristic(current_node,neighbor,end,return_speed, heuristic=heuristic, algorithm=algorithm)
+            neighbor = get_heuristic(current_node,neighbor,end,return_speed, heuristic=heuristic, algorithm=algorithm, speed_coefficient=speed_coefficient)
 
             #if this neighbor is in the open list already, and it's g value in the open list is less than the g value just calculated, do nothing
             #because the neighbor in the open list is better

@@ -23,10 +23,19 @@ We use three methods to create an optimal path for the Punt Returner; Pitch Cont
 # --outpath / -o : path to store the results (/results or /visualisations)
 # --logpath / -l : path to store the output - print statements from the logger
 # --mem / -m : proportion (% / 100) in range [0, 1] of system memory available during processing (default=0.8=80%)
+# --num_procs / -n : number of processes to use in multithreading
 # --algorithm / -q : which model to use to calculate optimal path; 
 #                       - astar_delaunay: the project's Delaunay window implementation of A* (default, False) 
 #                       - astar: the standard A* pathfinding algorithm (True)
 #                       - pitch_control: the Pitch Control method as described in the paper
+# --heuristic / -k : the heuristic function to use in ModA* & Delaunay Triangulation
+#                       - yardage: lambda c, d: np.linalg.norm(c[0] - d[0])
+#                       - euclidean: lambda c, d: np.linalg.norm(c - d)
+#                       - optimal: the optimal heuristic we found; lambda c, d: np.linalg.norm(c[0] - d[0])
+#                       - custom: defined in helpers.py
+# --speed_coeff / -s : the speed coefficient used to scale the distances by to get expected arrival times
+#                       - optimal: the optimal speed_coefficient we found; lambda a, b: get_angle(a.optimal_point, b.optimal_point) / a.optimal_time
+#                       - custom: defined in helpers.py
 processing_functions.py [-a | -p <play_id>] -i <input_path> -o <output_path> -l <logfile_full_filepath> -m <percentage_of_mem_usage_allowed> -q <algorithm_type>
 
 
@@ -39,6 +48,14 @@ processing_functions.py [-a | -p <play_id>] -i <input_path> -o <output_path> -l 
 #                       - astar_delaunay: the project's Delaunay window implementation of A* (default, False) 
 #                       - astar: the standard A* pathfinding algorithm (True)
 #                       - pitch_control: the Pitch Control method as described in the paper
+# --heuristic / -k : the heuristic function to use in ModA* & Delaunay Triangulation
+#                       - yardage: lambda c, d: np.linalg.norm(c[0] - d[0])
+#                       - euclidean: lambda c, d: np.linalg.norm(c - d)
+#                       - optimal: the optimal heuristic we found; lambda c, d: np.linalg.norm(c[0] - d[0])
+#                       - custom: defined in helpers.py
+# --speed_coeff / -s : the speed coefficient used to scale the distances by to get expected arrival times
+#                       - optimal: the optimal speed_coefficient we found; lambda a, b: get_angle(a.optimal_point, b.optimal_point) / a.optimal_time
+#                       - custom: defined in helpers.py
 visualisation_functions.py -p <play_id> -i <input_path> -o <output_path> -v <"new"/"old"/"funcanim"> -q <algorithm_type>
 ```
 
@@ -67,9 +84,12 @@ drive_folderpath = "Colab Notebooks"
 useDrive = False
 avg_player_speed = 7
 num_threads = 16
+do_multithread = True
 
-heuristic_func = lambda c, d: np.linalg.norm(c[0] - d[0])
+heuristic_func = lambda c, d, r: np.linalg.norm(c[0] - d[0])/r
+speed_coefficient_func = lambda a, b: get_angle(a.optimal_point, b.optimal_point) / a.optimal_time
 ```
+#### Variables heuristic_func and speed_coefficient_func are used in the ModA* algorithm, and can be changed here to be used when 'custom' is supplied to -k / --heuristic and -s / --speed_coeff in the command line
 
 ### There are also the following commands which setup the environment (dependencies, notebook options):
 
