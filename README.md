@@ -103,5 +103,5 @@ jupyter nbextension enable --py widgetsnbextension
 ### There is a conda environment which can be activated via environment.yml; use the following commands to setup the environment:
 
 ```py
-conda env create --name <env_name> --file=environments.yml
+conda env create --name <env_name> --file=environment.yml
 ```
