@@ -9,8 +9,7 @@ We use three methods to create an optimal path for the Punt Returner; Pitch Cont
 ### The repo contains the following notebooks:
 
 * NFL_Data_Cleaning: A notebook running through the data cleaning process for the NFL Big Data Bowl 2022 data
-* NFL_Data_Visualise: A notebook containing scripts to save a play as an .mp4 or .html file, alternatively use 'visualisation_functions.py'
-* NFL_Data_Results: A notebook showcasing the results in the paper and the comparisons of the techniques used for optimal path calculation
+* NFL_Data_Visualise_Results: A notebook showcasing the results in the paper and the comparisons of the techniques used for optimal path calculation
 
 ### And the following scripts, with the options commented above
 
