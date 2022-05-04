@@ -56,18 +56,18 @@ def process_play(playpath_,playname,filename="results_plays", outpath="results/"
         median_deviation = np.median(np.array(frechets))
         mean_deviation = np.mean(np.array(frechets))
         if save:
-            d = {'play':[playname],'yardage':[yardage_gained],'median_deviation':median_deviation,'mean_deviation':mean_deviation, 'algorithm':algorithm}
+            d = {'play':[playname],'yardage':[yardage_gained],'median_deviation':median_deviation,'mean_deviation':mean_deviation, 'heuristic':heuristic, 'algorithm':algorithm, 'speed_coefficient':speed_coefficient}
             df = pd.DataFrame(data=d)
             df.to_csv(outpath+filename+".csv", mode='a')
     #If the play crashes just output nothing
     except Exception as e:
         if save:
-            d = {'play':[playname],'yardage':None,'median_deviation':None,'mean_deviation':None, 'algorithm':None}
+            d = {'play':[playname],'yardage':None,'median_deviation':None,'mean_deviation':None, 'heuristic':heuristic, 'algorithm':algorithm, 'speed_coefficient':speed_coefficient}
             df = pd.DataFrame(data=d)
             df.to_csv(outpath+filename+".csv", mode='a')
     return df
 
-def process_play_lam(play, inpath=inputpath+"/receiving_plays", filename="results_plays", outpath="results/", algorithm="astar_delaunay", heuristic="yardage", speed_coefficient="optimal"):
+def process_play_lam(play, inpath=inputpath+"/receiving_plays", filename="results_plays", outpath="results/", heuristic="optimal", algorithm="astar_delaunay", speed_coefficient="optimal"):
     if os.path.exists(outpath+filename+".csv"):
         results = pd.read_csv(outpath+filename+".csv")
         if play in results.values:
@@ -82,13 +82,13 @@ def process_all_plays(inpath=inputpath+"/receiving_plays", outpath="results/", h
         file.close()
     if multithread:
         pool = multiprocessing.Pool(num_procs)
-        results = pool.map(partial(process_play_lam, inpath=inpath+"/", filename="results_plays", outpath=outpath, algorithm=algorithm, speed_coefficient=speed_coefficient), os.listdir(inpath))
+        results = pool.map(partial(process_play_lam, inpath=inpath+"/", filename=f"results_plays_heur={heuristic}_alg={algorithm}_scoeff={speed_coefficient}", outpath=outpath, heuristic=heuristic, algorithm=algorithm, speed_coefficient=speed_coefficient), os.listdir(inpath))
         df = pd.DataFrame(data=results)
         df.to_csv(f'results_plays_{algorithm}.csv', mode='a')
     else:
         results = []
         for p in os.listdir(inpath):
-            results.append(process_play_lam(p, inpath=inpath+"/", filename="results_plays", outpath=outpath, heuristic=heuristic, algorithm=algorithm, speed_coefficient=speed_coefficient))
+            results.append(process_play_lam(p, inpath=inpath+"/", filename=f"results_plays_heur={heuristic}_alg={algorithm}_scoeff={speed_coefficient}", outpath=outpath, heuristic=heuristic, algorithm=algorithm, speed_coefficient=speed_coefficient))
         pd.concat(results).to_csv(f'results_plays_{algorithm}.csv')
 
 def main(argv):
