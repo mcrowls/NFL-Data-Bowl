@@ -55,13 +55,13 @@ def process_play(playpath_,playname,filename="results_plays", outpath="results/"
             all_windows,optimal_points,play_direction,frechets,yardage_gained = process_frames(csv, True, True, heuristic=heuristic, algorithm=algorithm, speed_coefficient=speed_coefficient)
         median_deviation = np.median(np.array(frechets))
         mean_deviation = np.mean(np.array(frechets))
-        d = {'play':[playname],'yardage':[yardage_gained],'median_deviation':median_deviation,'mean_deviation':mean_deviation, 'heuristic':heuristic, 'algorithm':algorithm, 'speed_coefficient':speed_coefficient}
+        d = {'play':playname,'yardage':yardage_gained,'median_deviation':median_deviation,'mean_deviation':mean_deviation, 'heuristic':heuristic, 'algorithm':algorithm, 'speed_coefficient':speed_coefficient}
         df = pd.DataFrame(data=d)
         if save:
             df.to_csv(outpath+filename+".csv", mode='a')
     #If the play crashes just output nothing
     except Exception as e:
-        d = {'play':[playname],'yardage':0,'median_deviation':0,'mean_deviation':0, 'heuristic':heuristic, 'algorithm':algorithm, 'speed_coefficient':speed_coefficient}
+        d = {'play':playname,'yardage':None,'median_deviation':None,'mean_deviation':None, 'heuristic':heuristic, 'algorithm':algorithm, 'speed_coefficient':speed_coefficient}
         df = pd.DataFrame(data=d)
         if save:
             df.to_csv(outpath+filename+".csv", mode='a')
