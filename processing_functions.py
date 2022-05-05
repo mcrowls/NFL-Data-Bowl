@@ -49,13 +49,16 @@ def process_play(playpath_,playname,filename="results_plays", outpath="results/"
     try:
         if algorithm == "pitch_control":
             returner_pos, points, home, away, frame, pixels, pixel_values, frechet, yards, pitch_fraction, predicted_yards = pitch_control(csv)
+            median_deviation = frechet
+            mean_deviation = frechet
+            d = {'play':[playname],'yardage':[yards],'median_deviation':[median_deviation],'mean_deviation':[mean_deviation], 'heuristic':[heuristic], 'algorithm':[algorithm], 'speed_coefficient':[speed_coefficient]}
         else:
             size,returner_pos,home,away,balls,lines, \
             times,optimal_paths,optimal_path_points,windows,\
             all_windows,optimal_points,play_direction,frechets,yardage_gained = process_frames(csv, True, True, heuristic=heuristic, algorithm=algorithm, speed_coefficient=speed_coefficient)
-        median_deviation = np.median(np.array(frechets))
-        mean_deviation = np.mean(np.array(frechets))
-        d = {'play':[playname],'yardage':[yardage_gained],'median_deviation':[median_deviation],'mean_deviation':[mean_deviation], 'heuristic':[heuristic], 'algorithm':[algorithm], 'speed_coefficient':[speed_coefficient]}
+            median_deviation = np.median(np.array(frechets))
+            mean_deviation = np.mean(np.array(frechets))
+            d = {'play':[playname],'yardage':[yardage_gained],'median_deviation':[median_deviation],'mean_deviation':[mean_deviation], 'heuristic':[heuristic], 'algorithm':[algorithm], 'speed_coefficient':[speed_coefficient]}
         if save:
             df = pd.DataFrame.from_dict(d)
             df.to_csv(outpath+filename+".csv", mode='a')
@@ -100,11 +103,11 @@ def main(argv):
     try:
         opts, args = getopt.getopt(argv,"hap:o:i:l:m:n:q:k:s:S",["help","all","playid=","outpath=","inpath=","logpath=","mem=","num_procs=","algorithm=","heuristic=","speed_coeff="])
     except getopt.GetoptError:
-        print('processing_functions.py [-a | -p <play_id>] -i <input_path> -o <output_path> -l <logfile_full_filepath> -m <percentage_of_mem_usage_allowed> -q <algorithm_type> -k <heuristic_type> -s <speed_coefficient_type>')
+        print('processing_functions.py [-a | -p <play_id>] -i <input_path> -o <output_path> -l <logfile_full_filepath> -m <percentage_of_mem_usage_allowed> -q <algorithm_type> -k <heuristic_type> -s <speed_coefficient_type> -S')
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
-            print('processing_functions.py [-a | -p <play_id>] -i <input_path> -o <output_path> -l <logfile_full_filepath> -m <percentage_of_mem_usage_allowed> -q <algorithm_type> -k <heuristic> -s <speed_coefficient_type>')
+            print('processing_functions.py [-a | -p <play_id>] -i <input_path> -o <output_path> -l <logfile_full_filepath> -m <percentage_of_mem_usage_allowed> -q <algorithm_type> -k <heuristic> -s <speed_coefficient_type> -S')
             sys.exit()
         elif opt in ("-a", "--all"):
             if opt in ("-p", "--playid"):
@@ -162,4 +165,3 @@ def main(argv):
 
 if __name__ == '__main__':
     main(sys.argv[1:])
-    
