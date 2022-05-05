@@ -56,16 +56,16 @@ def process_play(playpath_,playname,filename="results_plays", outpath="results/"
         median_deviation = np.median(np.array(frechets))
         mean_deviation = np.mean(np.array(frechets))
         d = {'play':playname,'yardage':yardage_gained,'median_deviation':median_deviation,'mean_deviation':mean_deviation, 'heuristic':heuristic, 'algorithm':algorithm, 'speed_coefficient':speed_coefficient}
-        df = pd.DataFrame(data=d)
         if save:
+            df = pd.DataFrame(data=d)
             df.to_csv(outpath+filename+".csv", mode='a')
     #If the play crashes just output nothing
     except Exception as e:
         d = {'play':playname,'yardage':None,'median_deviation':None,'mean_deviation':None, 'heuristic':heuristic, 'algorithm':algorithm, 'speed_coefficient':speed_coefficient}
-        df = pd.DataFrame(data=d)
         if save:
+            df = pd.DataFrame(data=d)
             df.to_csv(outpath+filename+".csv", mode='a')
-    return df
+    return d
 
 def process_play_lam(play, inpath=inputpath+"/receiving_plays", filename="results_plays", outpath="results/", heuristic="optimal", algorithm="astar_delaunay", speed_coefficient="optimal"):
     if os.path.exists(outpath+filename+".csv"):
@@ -78,8 +78,10 @@ def process_play_lam(play, inpath=inputpath+"/receiving_plays", filename="result
 def process_all_plays(inpath=inputpath+"/receiving_plays", outpath="results/", heuristic='optimal', algorithm="astar_delaunay", speed_coefficient="optimal", num_procs=16):
     if multithread:
         pool = multiprocessing.Pool(num_procs)
+        df = pd.DataFrame(columns=['play','yardage','median_deviation','mean_deviation', 'heuristic', 'algorithm', 'speed_coefficient'])
         results = pool.map(partial(process_play_lam, inpath=inpath+"/", filename=f"results_plays_heur={heuristic}_alg={algorithm}_scoeff={speed_coefficient}", outpath=outpath, heuristic=heuristic, algorithm=algorithm, speed_coefficient=speed_coefficient), os.listdir(inpath))
-        df = pd.DataFrame(data=results)
+        for r in results:
+            df = df.append(r)
         df.to_csv(f"results_plays_heur={heuristic}_alg={algorithm}_scoeff={speed_coefficient}.csv", mode='a', header=True)
     else:
         results = []
