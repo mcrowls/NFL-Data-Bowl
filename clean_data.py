@@ -45,6 +45,9 @@ def clean_players_data(inputpath_, outputpath_):
   cleaned_players = pd.read_csv(outputpath_+"players.csv")
   return cleaned_players
 
+def scrape_madden(url="https://www.ea.com/games/madden-nfl/player-ratings?isLocalized=true"):
+  
+
 print("*** Cleaning Data [0/5] ***")
 print("* Cleaning 'players.csv' [1/5] *")
 clean_players_data(inputpath, outpath)
