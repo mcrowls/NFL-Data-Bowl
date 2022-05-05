@@ -73,7 +73,8 @@ def process_play_lam(play, inpath=inputpath+"/receiving_plays", filename="result
         if play in results.values:
             return results.loc[results['filename']==play]
     print(f"Processing play: {play}")
-    return process_play(inpath+"/"+play,play,filename,outpath, heuristic=heuristic, algorithm=algorithm, speed_coefficient=speed_coefficient, save=save)
+    filename_ = filename[:12] + f'_{play}' + filename[12:]
+    return process_play(inpath+"/"+play,play,filename_,outpath, heuristic=heuristic, algorithm=algorithm, speed_coefficient=speed_coefficient, save=save)
 
 def process_all_plays(inpath=inputpath+"/receiving_plays", outpath="results/", heuristic='optimal', algorithm="astar_delaunay", speed_coefficient="optimal", num_procs=16, save=False):
     if multithread:
