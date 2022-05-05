@@ -55,25 +55,21 @@ def process_play(playpath_,playname,filename="results_plays", outpath="results/"
             all_windows,optimal_points,play_direction,frechets,yardage_gained = process_frames(csv, True, True, heuristic=heuristic, algorithm=algorithm, speed_coefficient=speed_coefficient)
         median_deviation = np.median(np.array(frechets))
         mean_deviation = np.mean(np.array(frechets))
-        d = {'play':playname,'yardage':yardage_gained,'median_deviation':median_deviation,'mean_deviation':mean_deviation, 'heuristic':heuristic, 'algorithm':algorithm, 'speed_coefficient':speed_coefficient}
+        d = {'play':[playname],'yardage':[yardage_gained],'median_deviation':[median_deviation],'mean_deviation':[mean_deviation], 'heuristic':[heuristic], 'algorithm':[algorithm], 'speed_coefficient':[speed_coefficient]}
         if save:
             df = pd.DataFrame.from_dict(d)
             df.to_csv(outpath+filename+".csv", mode='a')
     #If the play crashes just output nothing
     except Exception as e:
-        d = {'play':playname,'yardage':None,'median_deviation':None,'mean_deviation':None, 'heuristic':heuristic, 'algorithm':algorithm, 'speed_coefficient':speed_coefficient}
+        d = {'play':[playname],'yardage':[None],'median_deviation':[None],'mean_deviation':[None], 'heuristic':[heuristic], 'algorithm':[algorithm], 'speed_coefficient':[speed_coefficient]}
         if save:
             df = pd.DataFrame.from_dict(d)
             df.to_csv(outpath+filename+".csv", mode='a')
     return d
 
 def process_play_lam(play, inpath=inputpath+"/receiving_plays", filename="results_plays", outpath="results/", heuristic="optimal", algorithm="astar_delaunay", speed_coefficient="optimal", save=False):
-    if os.path.exists(outpath+filename+".csv"):
-        results = pd.read_csv(outpath+filename+".csv")
-        if play in results.values:
-            return results.loc[results['filename']==play]
     print(f"Processing play: {play}")
-    filename_ = filename[:12] + f'_{play}' + filename[12:]
+    filename_ = filename[:12] + f'_{play[:-4]}' + filename[13:]
     return process_play(inpath+"/"+play,play,filename_,outpath, heuristic=heuristic, algorithm=algorithm, speed_coefficient=speed_coefficient, save=save)
 
 def process_all_plays(inpath=inputpath+"/receiving_plays", outpath="results/", heuristic='optimal', algorithm="astar_delaunay", speed_coefficient="optimal", num_procs=16, save=False):
