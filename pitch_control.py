@@ -9,23 +9,17 @@ import matplotlib.pyplot as plt
 import seaborn
 from helpers import get_distance
 from frechetdist import frdist
+from delaunay_triangulations import returner
+import os
 
-def returner(csv, frame):
-    df = csv[csv['frameId'] == frame]
-    football = df[df['displayName'] == 'football']
-    football_location = [football['x'].iloc[0], football['y'].iloc[0]]
+def get_closest_original(point, points):
+    # Want to add in speed
     distances = []
-    for player in np.unique(df['displayName']):
-        if player == 'football':
-            distances.append(100000)
-        else:
-            player_location = [df[df['displayName'] == player]['x'].iloc[0], df[df['displayName'] == player]['y'].iloc[0]]
-            distance_to_ball = get_distance(football_location, player_location)
-            distances.append(distance_to_ball)
-    min_distance_index = distances.index(np.min(distances))
-    return np.unique([df['displayName']])[min_distance_index]
+    for other_point in points:
+        distances.append(np.sqrt((point[0] - other_point[0])**2 + (point[1] - other_point[1])**2))
+    return distances.index(np.min(distances))
 
-def extract_one_game(game):
+def extract_one_game_original(game):
     home = {}
     away = {}
     balls = []
@@ -43,6 +37,28 @@ def extract_one_game(game):
     balls = list(zip(ball_df.x.tolist(), ball_df.y.tolist()))
     return home, away, balls
 
+def extract_one_game(game):
+    home = {}
+    h_speed = {}
+    a_speed = {}
+    away = {}
+    balls = []
+
+    players = game.sort_values(['frameId'], ascending=True).groupby('nflId')
+    for id, dx in players:
+        jerseyNumber = int(dx.jerseyNumber.iloc[0])
+        if dx.team.iloc[0] == "home":
+            home[jerseyNumber] = list(zip(dx.x.tolist(), dx.y.tolist()))
+            h_speed[jerseyNumber] = list(zip(dx.s.tolist(), dx.o.tolist()))
+        elif dx.team.iloc[0] == "away":
+            away[jerseyNumber] = list(zip(dx.x.tolist(), dx.y.tolist()))
+            a_speed[jerseyNumber] = list(zip(dx.s.tolist(), dx.o.tolist()))
+
+    ball_df = game.sort_values(['frameId'], ascending=True)
+    ball_df = ball_df[ball_df.team == "football"]
+    balls = list(zip(ball_df.x.tolist(), ball_df.y.tolist()))
+    return home, away, balls, h_speed, a_speed
+
 def get_pixels(pitch_size, grid_size):
     xs = np.linspace(0, pitch_size[0], grid_size[0])
     ys = np.linspace(0, pitch_size[1], grid_size[1])
@@ -56,14 +72,19 @@ def get_pixels(pitch_size, grid_size):
         pixels.append(row)
     return pixels, x_spacing, y_spacing
 
-def get_closest(point, points):
+def get_closest(point, points, speeds, reaction_time=0.7):
     # Want to add in speed
     distances = []
+    count = 0
     for other_point in points:
-        distances.append(np.sqrt((point[0] - other_point[0])**2 + (point[1] - other_point[1])**2))
+        # Update position after reaction time
+        reaction_pos = (other_point[0] + reaction_time*speeds[count][0]*np.cos(np.radians(speeds[count][1])),
+                        other_point[1] + reaction_time*speeds[count][0]*np.sin(np.radians(speeds[count][1])))
+        distances.append(np.sqrt((point[0] - reaction_pos[0])**2 + (point[1] - reaction_pos[1])**2))
+        count = count+1
     return distances.index(np.min(distances))
 
-def assign_pixel_values(frame, home, away, pixels):
+def assign_pixel_values_original(frame, home, away, pixels):
     # print(np.shape(pixels))
     values = np.zeros(np.shape(pixels)[:-1])
     home = [home[player][frame] for player in home]
@@ -75,6 +96,29 @@ def assign_pixel_values(frame, home, away, pixels):
             closest_home = get_closest(pixel, home)
             closest_away = get_closest(pixel, away)
             closest_index = get_closest(pixel, [home[closest_home], away[closest_away]])
+            # home = 0, away = 1
+            if closest_index == 0:
+                values[row_index][pixel_index] = 0
+            else:
+                values[row_index][pixel_index] = 1
+    return values
+
+
+def assign_pixel_values(frame, home, away, h_s, a_s, pixels):
+    # print(np.shape(pixels))
+    values = np.zeros(np.shape(pixels)[:-1])
+    home = [home[player][frame] for player in home]
+    away = [away[player][frame] for player in away]
+    h_s = [h_s[player][frame] for player in h_s]
+    a_s = [a_s[player][frame] for player in a_s]
+
+    for row in pixels:
+        row_index = pixels.index(row)
+        for pixel in row:
+            pixel_index = row.index(pixel)
+            closest_home = get_closest(pixel, home, h_s)
+            closest_away = get_closest(pixel, away, a_s)
+            closest_index = get_closest(pixel, [home[closest_home], away[closest_away]], [h_s[closest_home], a_s[closest_away]])
             # home = 0, away = 1
             if closest_index == 0:
                 values[row_index][pixel_index] = 0
@@ -166,28 +210,35 @@ def ch_search(ball_position, returner_value, pixels, pixel_values, x_spacing, y_
         y = round(ball_position[1]) + 0.5
     if pixel_values[int(x)-2][int(y)] != returner_value:
         x = round(ball_position[0]) + 0.5
+    
     starting_node = [x, y]
     sideways_direction = which_sideways_direction(starting_node, pixel_values)
     truth = True
     points = []
     counter = 0
+    other_counter = 0
     while truth == True:
         sideways = False
         points.append(starting_node)
-        direction = choose_direction(starting_node, pixels, pixel_values, sideways_direction)
+        direction = choose_direction(starting_node, pixels, pixel_values, 0)
         if direction == [0, 0]:
-            if np.shape(points)[0] > 3 and points[-2][0] == points[-3][0]:
-                counter += 1
-                index = find_critical_sideways_point(2, points)
-                starting_node = points[-index+2]
-                points = points[:-index+2]
-                if counter < 2:
-                    sideways_direction = [sideways_direction[0], -sideways_direction[1]]
+            direction = choose_direction(starting_node, pixels, pixel_values, sideways_direction)
+            if direction == [0, 0]:
+                if np.shape(points)[0] > 3 and points[-3][0] == points[-4][0]:
+                    counter += 1
+                    index = find_critical_sideways_point(2, points)
+                    starting_node = points[-index+2]
+                    points = points[:-index+2]
+                    if counter < 2:
+                        sideways_direction = [sideways_direction[0], -sideways_direction[1]]
+                    else:
+                        sideways_direction = 0
+                    sideways == True
                 else:
-                    sideways_direction = 0
-                sideways == True
-            else:
-                truth = False
+                    truth = False
+        other_counter += 1
+        if other_counter > 500:
+            truth = False
         if sideways == False:
             starting_node = [starting_node[0] + direction[0], starting_node[1] + direction[1]]
     return points
@@ -262,9 +313,10 @@ def calc_frechet_distance(actual_path, predicted_path, n):
     if len(predicted_path) > 500:
         predicted_path = remove_elements(predicted_path)
         actual_path = remove_elements(actual_path)
+    if len(predicted_path) == 0:
+        return "Bad"
     frdist_val = frdist(predicted_path, actual_path)
     return frdist_val
-
 
 def fraction_of_pitch(returner, pixel_values, last_defender):
     if returner[0][0] >= 119.5:
@@ -280,9 +332,20 @@ def fraction_of_pitch(returner, pixel_values, last_defender):
     count = np.count_nonzero(limited_pixels == ret_team_value)
     return count/np.size(limited_pixels), ret_team_value
 
+def check_team(returner_pos, pixel_values, frame):
+    if returner_pos[frame][0] >= 119.5:
+        index1 = 119
+    else:
+        index1 = round(returner_pos[frame][0])
+    if returner_pos[frame][1] >= 52.5:
+        index2 = 52
+    else:
+        index2 = round(returner_pos[frame][1])
+    return pixel_values[index1][index2]
+
 def pitch_control(csv):
     initial_pos = []
-    home, away, balls = extract_one_game(csv)
+    home, away, balls, h_s, a_s = extract_one_game(csv)
     for home_player, away_player in zip(home, away):
         h_pos = home[home_player][0][0]
         a_pos = away[away_player][0][0]
@@ -302,5 +365,50 @@ def pitch_control(csv):
     points = ch_search(balls[frame], value, pixels, pixel_values, x_spacing, y_spacing)
     predicted_yards = yards_gained(points)
     frechet = calc_frechet_distance(returner_pos, points, 5)
+    
     return returner_pos, points, home, away, frame, pixels, pixel_values, frechet, yards, pitch_fraction, predicted_yards
+
+def sort_pitch_control(returner_pos, receive_frame, home, away, h_s, a_s, pixels, initial_team_value, balls, x_spacing, y_spacing, predicted_yards, frechets, yards):
+    diff = int(len(returner_pos)/5)
+    if diff == 0:
+        diff = 1
+    for frame in np.arange(receive_frame, receive_frame + len(returner_pos), diff):
+        pixel_values = assign_pixel_values(frame, home, away, h_s, a_s, pixels)
+        team_value = check_team(returner_pos, pixel_values, frame-receive_frame)
+        # print(team_value, initial_team_value)
+        # print(np.shape(pixel_values))
+        if team_value == initial_team_value:
+                # pixels_array.append(pixel_values)
+            points = ch_search(balls[frame], team_value, pixels, pixel_values, x_spacing, y_spacing)
+            # predicted_yards.append(yards_gained(points))
+            print("predicted yards gained", yards_gained(points))
+            print("left to go", points[0][0])
+            print("fraction of pitch gained with prediction", yards_gained(points)/(points[0][0]))
+            predicted_yards.append(yards_gained(points))
+            # yards_array.append(yards)
+            # fractions.append(pitch_fraction)
+            # pitch_fractions.append(fraction_of_pitch()
+            frechets.append(calc_frechet_distance(returner_pos[frame-receive_frame:], points, 5))
+            # draw_return_and_prediction(returner_pos, points, home, away, frame, pixels, pixel_values)
+    return np.nanmean(frechets), yards, predicted_yards[-1]+returner_pos[-1][0]-returner_pos[0][0], punt_returner
+
+def get_predicted_yards(inpath, alldatacsv, outpath):
+    dataframe = []
+    files = [f for f in os.listdir(f'{inpath}Receiving_Plays')]
+    # bad_files = [400, 448, 463]
+    for string in files:
+        csv = pd.read_csv(f'{inpath}Receiving_Plays/' + string)
+        receive_frame = csv[csv['event'] == 'punt_received']['frameId'].iloc[0]
+        punt_returner = returner(csv, receive_frame)
+        # print(punt_returner)
+        returner_pos = csv[csv['displayName'] == punt_returner][receive_frame:]
+        returner_pos = list(zip(returner_pos.x.tolist(), returner_pos.y.tolist()))
+        index = files.index(string)
+        print(string, "file no", files.index(string), "/731")
+        yards = yards_gained(returner_pos)/(returner_pos[0][0] + 10)
+        print(yards)
+        array = [yards*100]
+        dataframe.append(array)
+    df = pd.DataFrame(dataframe, columns=['Predicted Yards'])
+    df.to_csv(f'{outpath}results_predicted_yards.csv')
     

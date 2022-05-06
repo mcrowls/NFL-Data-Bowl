@@ -14,6 +14,8 @@ import matplotlib.pyplot as mpl
 import seaborn as sns
 import os
 from helpers import inputpath, outputpath, useDrive, get_more_specific_df, create_new_folder, avg_player_speed
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
 
 # Uncomment if you want to save the processed data elsewhere, but run this on first run
 outpath = inputpath
@@ -36,7 +38,6 @@ def clean_players_data(inputpath_, outputpath_):
   players['height'] = check['feet']
   players['height'] = players['height'].astype(np.float32)
   """Making all dates the same format"""
-  #TODO get birthdate from missing ones
   for idx, row in players.iterrows():
     if type(row['birthDate']) is String and "/" in row['birthDate']: 
           split = row["birthDate"].split("/")
@@ -44,10 +45,6 @@ def clean_players_data(inputpath_, outputpath_):
   players.to_csv(outputpath_+"players.csv",index=False)
   cleaned_players = pd.read_csv(outputpath_+"players.csv")
   return cleaned_players
-
-print("*** Cleaning Data [0/5] ***")
-print("* Cleaning 'players.csv' [1/5] *")
-clean_players_data(inputpath, outpath)
 
 """# Cleaning NFL Plays Data"""
 def clean_plays_data(inputpath_, outputpath_):
@@ -65,9 +62,6 @@ def clean_plays_data(inputpath_, outputpath_):
   punt.to_csv(outputpath_+"punt.csv",index=False)
   fieldGoal.to_csv(outputpath_+"fieldGoal.csv",index=False)
   extraPoint.to_csv(outputpath_+"extraPoint.csv",index=False)
-
-print("* Cleaning 'plays.csv' [2/5] *")
-clean_plays_data(inputpath, outpath)
 
 """# Cleaning NFL Tracking Data for Player locations on Punts"""
 def clean_tracking_data(inputpath_, outputpath_, foldername):
@@ -89,9 +83,6 @@ def clean_tracking_data(inputpath_, outputpath_, foldername):
               if 'punt_received' in np.unique(new_df['event']):
                   new_df.to_csv(outputpath_+foldername+'/play' + str(id) + '-game' + str(game) + '.csv')
                   
-print("* Cleaning Tracking Data [3/5] *")
-clean_tracking_data(inputpath, outpath, "receiving_plays")
-
 """# Cleaning Madden 2022 Data for Player Speeds"""
 def clean_madden_data(inputpath_, outputpath_):
   ratings_csv = pd.read_csv(inputpath_+'madden_21_ratings.csv')
@@ -107,7 +98,7 @@ def clean_madden_data(inputpath_, outputpath_):
   min_agility = np.min(agilities)
   max_agility = np.max(agilities)
 
-  zs = list(map(lambda x: ((x - mean_speed)/std_speed), speeds))
+  zs = list(map(lambda x: ((x - mean_speed)/std_speed),  speeds))
   accels = list(map(lambda x: (x - min_accel) / (max_accel - min_accel), accelerations))
   agils = list(map(lambda x: (x - min_agility) / (max_agility - min_agility), agilities))
 
@@ -122,27 +113,32 @@ def clean_madden_data(inputpath_, outputpath_):
       df.loc[i, :] = [names[i], speed, acceleration, agility]
   df.to_csv(outputpath_+'player_speeds.csv')
   return df
-  
-print("* Cleaning 'madden_21_ratings.csv' [4/5] *")
-clean_madden_data(inputpath, outpath)
-
 
 def clean_play_directions(inputpath_):
-      receiving_plays_path = inputpath_+"receiving_plays"
-      print(receiving_plays_path)
-      for play_file in os.listdir(receiving_plays_path):
-            print(play_file)
-            
-            play_csv = pd.read_csv(receiving_plays_path+"/"+play_file)
-            play_direction = play_csv["playDirection"].iloc[0]
-            if play_direction == "left":
-                print("left")
-                play_csv["x"] = 120-play_csv["x"]
-                play_csv["y"] = 160/3 - play_csv["y"]
-                play_csv.to_csv(receiving_plays_path+"/"+play_file)
-                #break
-                  
+  receiving_plays_path = inputpath_+"receiving_plays"
+  print(receiving_plays_path)
+  for play_file in os.listdir(receiving_plays_path):
+        print(play_file)
+        
+        play_csv = pd.read_csv(receiving_plays_path+"/"+play_file)
+        play_direction = play_csv["playDirection"].iloc[0]
+        if play_direction == "left":
+            print("left")
+            play_csv["x"] = 120-play_csv["x"]
+            play_csv["y"] = 160/3 - play_csv["y"]
+            play_csv.to_csv(receiving_plays_path+"/"+play_file)
+            #break
 
+print("*** Cleaning Data [0/5] ***")
+print("* Cleaning 'players.csv' [1/5] *")
+clean_players_data(inputpath, outpath)
+print("* Cleaning 'plays.csv' [2/5] *")
+clean_plays_data(inputpath, outpath)
+print("* Cleaning Tracking Data [3/5] *")
+clean_tracking_data(inputpath, outpath, "receiving_plays")
+print("* Cleaning 'madden_21_ratings.csv' and 'madden_22_ratings.csv' [4/5] *")
+clean_madden_data(inputpath, outpath)
 print("* Cleaning player directions [5/5] *")
 clean_play_directions(inputpath)   
+
 print("*** Done - all Data cleaned ***")

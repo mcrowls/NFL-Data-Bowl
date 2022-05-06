@@ -36,7 +36,7 @@ We use three methods to create an optimal path for the Punt Returner; Pitch Cont
 #                       - optimal: the optimal speed_coefficient we found; lambda a, b: get_angle(a.optimal_point, b.optimal_point) / a.optimal_time
 #                       - custom: defined in helpers.py
 # --save / -S : whether to save the output from each play to a csv after running processing_functions
-processing_functions.py [-a | -p <play_id>] -i <input_path> -o <output_path> -l <logfile_full_filepath> -m <percentage_of_mem_usage_allowed> -q <algorithm_type>
+processing_functions.py [-a | -p <play_id>] -i <input_path> -o <output_path> -l <logfile_full_filepath> -m <percentage_of_mem_usage_allowed> -q <algorithm_type> -k <heuristic_type> -s <speed_coefficient_type> -S
 
 
 
@@ -57,7 +57,7 @@ processing_functions.py [-a | -p <play_id>] -i <input_path> -o <output_path> -l 
 #                       - optimal: the optimal speed_coefficient we found; lambda a, b: get_angle(a.optimal_point, b.optimal_point) / a.optimal_time
 #                       - custom: defined in helpers.py
 # --save / -S : whether to save the output from each play to a csv after running processing_functions
-visualisation_functions.py -p <play_id> -i <input_path> -o <output_path> -v <"new"/"old"/"funcanim"> -q <algorithm_type>
+visualisation_functions.py -p <play_id> -i <input_path> -o <output_path> -v <"new"/"old"/"funcanim"> -q <algorithm_type> -k <heuristic_type> -s <speed_coefficient_type>
 ```
 
 ## Optimal Path for Frame 3 from play116-game2021010301 using A\*

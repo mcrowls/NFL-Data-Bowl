@@ -1,5 +1,6 @@
 from helpers import create_new_folder, inputpath
 import os
+import fnmatch
 import pandas as pd
 
 import numpy as np
@@ -12,7 +13,7 @@ except:
     not_unix = True
 from visualisation_functions import process_frames
 from pitch_control import pitch_control
-from helpers import num_threads, play_filename, heuristic_func, do_multithread, optimal_path_heuristic
+from helpers import num_threads, play_filename, heuristic_func, do_multithread, optimal_path_heuristic, get_more_specific_df
 import sys, getopt
 from functools import partial
 multithread = do_multithread
@@ -89,6 +90,76 @@ def process_all_plays(inpath=inputpath+"/receiving_plays", outpath="results/", h
             results.append(process_play_lam(p, inpath=inpath+"/", filename=f"results_plays_heur={heuristic}_alg={algorithm}_scoeff={speed_coefficient}", outpath=outpath, heuristic=heuristic, algorithm=algorithm, speed_coefficient=speed_coefficient, save=save))
         pd.concat(results).to_csv(f"results_plays_heur={heuristic}_alg={algorithm}_scoeff={speed_coefficient}.csv", header=True)
 
+def aggregate_results(inpath="results", algorithm="astar", outpath="results"):	
+    string_ = '*astar_s*'
+    if algorithm == "astar":
+        string_ = '*alg=astar_s*'
+    elif algorithm == "astar_delaunay":
+        string_ = '*alg=astar_delaunay*'
+    elif algorithm == "pitch_control":
+        string_ = '*alg=pitch_control*'
+    files = fnmatch.filter(os.listdir(inpath), string_)
+    yards = []
+    devs = []
+    other = open(f"{outpath}/results_full_{algorithm}.csv","a")
+    other.write("play,yardage,median_deviation,mean_deviation,heuristic,algorithm,speed_coefficient\n")
+    for f in files:
+        row = open(f"{inpath}/"+f)
+        lines = row.readlines()
+        print(lines[1][2:])
+        other.write(lines[1][2:])
+    other.close()
+
+def aggregate_results_pitch_control(inpath="data/", outpath="results"):	
+    fractions = []
+    yards_array = []
+    predicted_yards_array = []
+    frechets = []
+    dataframe = []
+
+    files = [f for f in os.listdir(f'{inpath}Receiving_Plays')]
+    games_csv = pd.read_csv(f'{inpath}games.csv')
+    # bad_files = [400, 448, 463]
+    for string in files:
+        csv = pd.read_csv(f'{inpath}Receiving_Plays/' + string)
+        game = string.split('game')[1][:-4]
+        game_row = get_more_specific_df(games_csv, 'gameId', int(game))
+        home = game_row['homeTeamAbbr'].iloc[0]
+        visitor = game_row['visitorTeamAbbr'].iloc[0]
+        print(string, "file no", files.index(string), "/731")
+        frechet, yards, pitch_fraction, predicted_yards, punt_returner = pitch_control(csv)
+        returner_array = csv[csv['displayName'] == punt_returner]
+        home_or_away = returner_array['team'].iloc[0]
+
+        if home_or_away == 'home':
+            returner_team = home
+            other_team = visitor
+        else:
+            returner_team = visitor
+            other_team = home
+        if frechet != "Bad":
+            frechets.append(frechet)
+            yards_array.append(yards)
+            predicted_yards_array.append(predicted_yards)
+            fractions.append(pitch_fraction)
+            array = [files.index(string), punt_returner, frechet, yards, predicted_yards, pitch_fraction, returner_team, other_team]
+            dataframe.append(array)
+    df = pd.DataFrame(dataframe, columns=['Game', 'Returner Name', 'Frechet Distance', 'Yards Gained', 'Predicted Yards', 'Control Fraction', 'Returning Team', 'Defending Team'])
+    df.to_csv(f"{outpath}/results_full_pitch_control_detailed.csv")
+
+def sort_wages(csv="results/ranking_stats", outpath="results"):
+    csvp = pd.read_csv(f'{csv}.csv')
+    wages = csv['Wage']
+    print(min(wages))
+    print(max(wages))
+    wages_array = []
+    for i in range(len(wages)):
+        wages_ = (wages[i] - np.min(wages))/(np.max(wages) - np.min(wages))
+        wages_array.append(wages_)
+    df = pd.DataFrame(wages_array, columns=['wage'])
+    df.to_csv(f'{outpath}/wages.csv')
+    print(f"wages min: {min(wages)}, max: {max(wages)}")
+
 def main(argv):
     logpath = None
     algorithm = "astar_delaunay"
@@ -156,6 +227,10 @@ def main(argv):
     create_new_folder(outputpath)
     if process_all:
         process_all_plays(inpath, outputpath+"/", heuristic=heuristic, algorithm=algorithm, speed_coefficient=scoeff, num_procs=num_procs, save=save)
+        aggregate_results("results", "astar")
+        aggregate_results("results", "astar_delaunay")
+        aggregate_results("results", "pitch_control")
+        aggregate_results_pitch_control(inpath="data/", outpath="results")
     else:
         process_play(inpath+"/"+play+".csv", play, outputpath, f"result_{play}", heuristic=heuristic, algorithm=algorithm, speed_coefficient=scoeff, save=save)
     if logpath is not None:
