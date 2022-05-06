@@ -440,6 +440,16 @@ def graph_frechet(frechets, yards, outpath):
     plt.ylabel('Yards Gained')
     plt.savefig(outpath+".png")
     plt.show()
+    
+def graph_frechet_From_csv(inpath, outpath, rline=False):
+    df = pd.read_csv(inpath+".csv")
+    frechets = df['median_deviation'].tolist()
+    yards = df['yardage'].tolist()
+    plt.scatter(frechets, yards, c='green')
+    plt.xlabel('Frechet Distance between the Predicted and Actual path')
+    plt.ylabel('Yards Gained')
+    plt.savefig(outpath+".png")
+    plt.show()
 
 def visualise_play(inpath=inputpath+"receiving_plays/", outpath=visoutputpath, playname=play_filename[:-4], changeFigsize=False, heuristic='optimal', algorithm="astar_delaunay", speed_coefficient='optimal'):
     create_new_folder(outpath+f"{playname}_heur={heuristic}_alg={algorithm}_scoeff={speed_coefficient}")
@@ -535,6 +545,47 @@ def create_graph(output_results):
     plt.title("Plot showing median path deviation vs yards gained for each play")
     plt.xlabel("Median Path Deviation")
     plt.ylabel("Yards gained")
+    plt.show()
+
+def create_graphs_pitch_control(frechets, yards_array, fractions, predicted_yards_array):
+    plt.scatter(frechets, yards_array, c='green')
+    plt.title('Frechet Distance between the Predicted and Actual path Against Yards Gained')
+    plt.xlabel('Frechet Distance')
+    plt.ylabel('Yards Gained')
+    plt.show()
+
+    plt.scatter(fractions, yards_array, c='blue')
+    plt.title('Fraction of the Pitch Controlled by Returning Team Against Yards Gained')
+    plt.xlabel('Control Fraction')
+    plt.ylabel('Yards Gained')
+    plt.show()
+
+    plt.scatter(predicted_yards_array, yards_array, c='red')
+    plt.title('Predicted Yards Gained Against Actual Yards Gained')
+    plt.xlabel('Predicted Yards Gained')
+    plt.ylabel('Actual Yards Gained')
+    plt.show()
+
+def create_graph_and_coeffs_all(csv_alldata="data/alldata", output_results="results"):
+    data = pd.read_csv(csv_alldata+'.csv')
+    a_star_data = pd.read_csv('New Folder/results_full_astar.csv')
+    a_star_data_delaunay = pd.read_csv('New Folder/results_full_astar_delaunay.csv')
+    data = data.dropna()
+    a_star_data = a_star_data.dropna()
+    a_star_data_delaunay = a_star_data_delaunay.dropna()
+
+    plt.scatter(data['Frechet Distance'], data['Yards Gained Percentage'], c='r', label='Pitch Control Algorithm')
+    plt.scatter(a_star_data['median_deviation'], a_star_data['yardage'], c='b', label='A* Search Algorithm')
+    plt.scatter(a_star_data_delaunay['median_deviation'], a_star_data_delaunay['yardage'], c='g', label='A* Search Algorithm with Orientation')
+    df = pd.DataFrame(columns=['coeff_pitch_control', 'coeff_astar', 'coeff_astar_delaunay'])
+    pc_coeff = np.corrcoef(data['Frechet Distance'], data['Yards Gained Percentage'])
+    a_star_coeff = np.corrcoef(a_star_data['median_deviation'], a_star_data['yardage'])
+    other_coeff = np.corrcoef(a_star_data_delaunay['median_deviation'], a_star_data_delaunay['yardage'])
+    df = df.append({'coeff_pitch_control':pc_coeff, 'coeff_astar':a_star_coeff, 'coeff_astar_delaunay':other_coeff}, ignore_index=True)
+    df.to_csv(output_results+"/results_coeffs.csv",index=False)
+    plt.xlabel('Frechet Distance')
+    plt.ylabel('Percentage Yards Gained')
+    plt.legend(loc='best')
     plt.show()
 
 def main(argv):

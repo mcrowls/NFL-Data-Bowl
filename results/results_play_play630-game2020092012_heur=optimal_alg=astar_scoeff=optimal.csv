@@ -1,0 +1,4 @@
+,play,yardage,median_deviation,mean_deviation,heuristic,algorithm,speed_coefficient
+0,play630-game2020092012.csv,0.3300000000000125,7.095233414141226,8.861325844164153,optimal,astar,optimal
+,play,yardage,median_deviation,mean_deviation,heuristic,algorithm,speed_coefficient
+0,play630-game2020092012.csv,0.3300000000000125,7.095233414141226,8.861325844164153,optimal,astar,optimal
